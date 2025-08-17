@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Artikel — Wibowo Laksono</title>
+  <meta name="description" content="Baca artikel blog di situs ini tanpa pindah ke halaman lain.">
+  <meta name="theme-color" content="#0f172a">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    html { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans'; }
+    :root { color-scheme: light dark; }
+    .bg-grid { background-image: radial-gradient(rgba(99,102,241,0.15) 1px, transparent 1px); background-size: 18px 18px; }
+    body { opacity: 0; transition: opacity .25s ease; }
+    body.ready { opacity: 1; }
+    .content img { max-width: 100%; height: auto; border-radius: 0.5rem; }
+    .content iframe { max-width: 100%; }
+    .content figure { margin: 1rem 0; }
+    .content h1, .content h2, .content h3 { margin-top: 1.25rem; font-weight: 700; }
+    .content p { margin-top: 0.75rem; line-height: 1.75; }
+    .content ul { list-style: disc; padding-left: 1.25rem; margin-top: .5rem; }
+    .content ol { list-style: decimal; padding-left: 1.25rem; margin-top: .5rem; }
+    .content a { color: #4f46e5; text-decoration: underline; }
+  </style>
+  <link rel="icon" href="https://www.smkn1telagasari.sch.id/wp-content/uploads/2022/07/199207302020121021-300x300.png" type="image/png">
+  <link rel="apple-touch-icon" href="https://www.smkn1telagasari.sch.id/wp-content/uploads/2022/07/199207302020121021-300x300.png">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Artikel — Wibowo Laksono">
+  <meta property="og:description" content="Baca artikel blog di situs ini.">
+  <meta property="og:image" content="https://me.kelastkj.online/profile.png">
+</head>
+<body class="min-h-screen bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-100">
+  <div class="absolute inset-0 bg-grid [mask-image:radial-gradient(ellipse_at_center,black,transparent_60%)] pointer-events-none"></div>
+
+  <main class="relative mx-auto w-full max-w-3xl px-4 sm:px-6 py-6">
+    <header class="flex items-center justify-between gap-3">
+      <button id="back" class="inline-flex items-center gap-2 rounded-full bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100 px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700 transition">⬅️ Kembali</button>
+      <a id="open-original" href="#" target="_blank" rel="noreferrer" class="text-sm text-indigo-600 hover:underline hidden">Buka di Blogger ↗</a>
+    </header>
+
+  <article class="mt-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 shadow-sm overflow-hidden">
+      <div class="p-5 sm:p-7">
+        <h1 id="title" class="text-xl sm:text-2xl font-extrabold tracking-tight">Memuat…</h1>
+        <p id="meta" class="mt-1 text-[12px] text-slate-500 dark:text-slate-400"></p>
+        <!-- Article skeleton -->
+        <div id="article-skeleton" class="mt-3 space-y-3 animate-pulse">
+          <div class="h-6 bg-slate-200 dark:bg-slate-800 rounded w-3/4"></div>
+          <div class="h-3 bg-slate-200 dark:bg-slate-800 rounded w-1/3"></div>
+          <div class="mt-2 space-y-2">
+            <div class="h-4 bg-slate-200 dark:bg-slate-800 rounded"></div>
+            <div class="h-4 bg-slate-200 dark:bg-slate-800 rounded w-11/12"></div>
+            <div class="h-4 bg-slate-200 dark:bg-slate-800 rounded w-10/12"></div>
+            <div class="h-4 bg-slate-200 dark:bg-slate-800 rounded w-7/12"></div>
+          </div>
+        </div>
+        <div id="content" class="content mt-4 text-[15px]"></div>
+        <div id="error" class="mt-4 text-sm text-red-600 hidden"></div>
+
+        <!-- Bottom meta and actions -->
+        <hr class="mt-6 border-slate-200 dark:border-slate-800">
+        <section id="post-bottom" class="mt-4 space-y-4">
+          <!-- Labels -->
+          <div id="labels-wrap" class="hidden">
+            <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Label</div>
+            <div id="labels" class="flex flex-wrap gap-2"></div>
+          </div>
+        </section>
+      </div>
+    </article>
+
+    <!-- Related posts -->
+    <section class="mt-6">
+      <h2 class="text-base font-semibold">Baca juga</h2>
+      <!-- Related skeleton -->
+      <div id="related-skeleton" class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4 animate-pulse">
+        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 overflow-hidden flex gap-3">
+          <div class="h-20 w-28 bg-slate-200 dark:bg-slate-800"></div>
+          <div class="p-3 pr-4 flex-1 space-y-2">
+            <div class="h-4 bg-slate-200 dark:bg-slate-800 rounded w-full"></div>
+            <div class="h-4 bg-slate-200 dark:bg-slate-800 rounded w-4/5"></div>
+          </div>
+        </div>
+        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 overflow-hidden flex gap-3">
+          <div class="h-20 w-28 bg-slate-200 dark:bg-slate-800"></div>
+          <div class="p-3 pr-4 flex-1 space-y-2">
+            <div class="h-4 bg-slate-200 dark:bg-slate-800 rounded w-full"></div>
+            <div class="h-4 bg-slate-200 dark:bg-slate-800 rounded w-4/5"></div>
+          </div>
+        </div>
+      </div>
+      <div id="related-grid" class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+      <div id="related-empty" class="mt-3 text-sm text-slate-500 hidden">Tidak ada rekomendasi.</div>
+    </section>
+
+    <!-- Bottom navigation / footer -->
+    <footer class="mt-8 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+      <a href="index.html?view=blog" class="inline-flex items-center gap-1 hover:underline">← Kembali ke daftar Blog</a>
+      <div>© <span id="year"></span> Wibowo Laksono</div>
+    </footer>
+  </main>
+
+  <script>
+    // Fade-in
+    document.addEventListener('DOMContentLoaded', () => {
+      requestAnimationFrame(() => document.body.classList.add('ready'));
+    });
+
+    function navigateSmooth(url) {
+      if ('startViewTransition' in document) {
+        // @ts-ignore
+        document.startViewTransition(() => { window.location.href = url; });
+      } else {
+        document.body.classList.remove('ready');
+        setTimeout(() => { window.location.href = url; }, 180);
+      }
+    }
+  document.getElementById('back')?.addEventListener('click', () => navigateSmooth('index.html?view=blog'));
+
+  const elTitle = document.getElementById('title');
+    const elMeta = document.getElementById('meta');
+    const elContent = document.getElementById('content');
+  const elErr = document.getElementById('error');
+  const openOriginal = document.getElementById('open-original');
+  const labelsWrap = document.getElementById('labels-wrap');
+  const labelsEl = document.getElementById('labels');
+  const relatedGrid = document.getElementById('related-grid');
+  const relatedEmpty = document.getElementById('related-empty');
+  const articleSkeleton = document.getElementById('article-skeleton');
+  const relatedSkeleton = document.getElementById('related-skeleton');
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+
+  let currentBid = null;
+  let currentPid = null;
+  let currentAltUrl = null;
+
+    function jsonp(url, cb) {
+      const cbName = 'handleEntry_' + Math.random().toString(36).slice(2);
+      const s = document.createElement('script');
+      const cleanup = () => { delete window[cbName]; s.remove(); };
+      window[cbName] = (data) => { cleanup(); cb(null, data); };
+      s.onerror = () => { cleanup(); cb(new Error('JSONP gagal')); };
+      s.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cbName;
+      document.body.appendChild(s);
+    }
+
+    function stripHtml(html) {
+      const div = document.createElement('div');
+      div.innerHTML = html;
+      return (div.textContent || div.innerText || '').trim();
+    }
+
+    function extractThumb(html) {
+      try {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const img = doc.querySelector('img');
+        return img ? img.src : null;
+      } catch { return null; }
+    }
+
+    function formatDate(isoStr) {
+      if (!isoStr) return '';
+      const d = new Date(isoStr);
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleDateString('id-ID', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+  // No hero image above title per user request
+
+  function hideArticleSkeleton(){ articleSkeleton?.classList.add('hidden'); }
+  function hideRelatedSkeleton(){ relatedSkeleton?.classList.add('hidden'); }
+
+  function renderEntry(entry) {
+      const title = entry.title?.$t || 'Tanpa judul';
+      const dateStr = entry.published?.$t || entry.updated?.$t || '';
+      const dateLabel = formatDate(dateStr);
+      const author = (entry.author && entry.author[0] && entry.author[0].name?.$t) ? entry.author[0].name.$t : '';
+      const contentHtml = entry.content?.$t || entry.summary?.$t || '';
+  const thumb = entry.media$thumbnail?.url || extractThumb(contentHtml) || null;
+      const altLink = (entry.link || []).find(l => l.rel === 'alternate')?.href || null;
+      currentAltUrl = altLink || window.location.href;
+      // Try get IDs from entry.id
+      const idText = entry.id?.$t || '';
+      const m = idText.match(/blog-(\d+)\.post-(\d+)/);
+      if (m) { currentBid = m[1]; currentPid = m[2]; }
+
+      document.title = title + ' — Wibowo Laksono';
+      elTitle.textContent = title;
+      // Calculate reading time
+      const plain = stripHtml(contentHtml);
+      const words = plain.split(/\s+/).filter(Boolean).length;
+      const readMin = Math.max(1, Math.round(words / 200));
+      const metaParts = [dateLabel, author, readMin + ' menit baca'];
+      elMeta.textContent = metaParts.filter(Boolean).join(' • ');
+  elContent.innerHTML = contentHtml;
+  // hero removed
+      if (altLink) { openOriginal.href = altLink; openOriginal.classList.remove('hidden'); }
+
+  // Labels
+      const labels = Array.isArray(entry.category) ? entry.category.map(c => c.term).filter(Boolean) : [];
+      if (labels.length) {
+        labelsWrap.classList.remove('hidden');
+        labelsEl.innerHTML = '';
+        labels.forEach(l => {
+          const a = document.createElement('span');
+          a.textContent = l;
+          a.className = 'inline-flex items-center rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200 px-2.5 py-1 text-[11px] border border-slate-200 dark:border-slate-700';
+          labelsEl.appendChild(a);
+        });
+      }
+
+  // share buttons removed as requested
+
+  hideArticleSkeleton();
+  // Load related posts
+      loadRelated();
+    }
+
+    function showError(msg) {
+      elErr.textContent = msg;
+      elErr.classList.remove('hidden');
+    }
+
+    function toLocalLinkByEntry(entry, fallbackUrl) {
+      const idText = entry.id?.$t || '';
+      const m = idText.match(/blog-(\d+)\.post-(\d+)/);
+      if (m) {
+        const bid = m[1];
+        const pid = m[2];
+        return `post.html?bid=${encodeURIComponent(bid)}&pid=${encodeURIComponent(pid)}`;
+      }
+      return `post.html?url=${encodeURIComponent(fallbackUrl || '')}`;
+    }
+
+    function createRelatedCard(e) {
+      const title = e.title?.$t || 'Tanpa judul';
+      const link = (e.link || []).find(l => l.rel === 'alternate')?.href || '#';
+      const content = e.content?.$t || e.summary?.$t || '';
+      let thumb = e.media$thumbnail?.url || extractThumb(content) || null;
+      if (thumb && thumb.startsWith('https://blogger.googleusercontent.com/img/b/')) {
+        thumb = thumb.replace(/\/s\d+(?=-)/, '/s800');
+      }
+      const localHref = toLocalLinkByEntry(e, link);
+      const el = document.createElement('a');
+      el.href = localHref;
+      el.className = 'group rounded-xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 overflow-hidden shadow-sm hover:shadow transition flex gap-3';
+      el.innerHTML = `
+        ${thumb ? `<img src="${thumb}" alt="" class="h-20 w-28 object-cover">` : `<div class="h-20 w-28 bg-slate-100 dark:bg-slate-800"></div>`}
+        <div class="p-3 pr-4">
+          <div class="text-[13px] font-semibold group-hover:underline line-clamp-2">${title}</div>
+        </div>`;
+      return el;
+    }
+
+    function loadRelated() {
+      const cacheKey = 'related:latest';
+      const url = `https://wajibhimung.blogspot.com/feeds/posts/default?alt=json-in-script&max-results=6`;
+
+      // try cache first
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          const data = JSON.parse(cached);
+          renderRelated(data);
+          // SWR: revalidate quietly
+          fetchRelatedAndCache(cacheKey, url);
+          return;
+        }
+      } catch {}
+
+      // no cache: fetch via JSONP
+      fetchRelatedAndCache(cacheKey, url, true);
+    }
+
+    function fetchRelatedAndCache(cacheKey, url, showSkeleton) {
+      if (showSkeleton) relatedSkeleton?.classList.remove('hidden');
+      jsonp(url, (err, data) => {
+        if (err) { hideRelatedSkeleton(); return; }
+        try { sessionStorage.setItem(cacheKey, JSON.stringify(data)); } catch {}
+        renderRelated(data);
+      });
+    }
+
+    function renderRelated(data) {
+      const entries = (data && data.feed && data.feed.entry) ? data.feed.entry : [];
+      const filtered = entries.filter(e => {
+        const idText = e.id?.$t || '';
+        const m = idText.match(/blog-(\d+)\.post-(\d+)/);
+        const pid = m ? m[2] : null;
+        return !currentPid || pid !== currentPid;
+      }).slice(0, 3);
+      hideRelatedSkeleton();
+      if (!filtered.length) { relatedEmpty.classList.remove('hidden'); return; }
+      relatedGrid.innerHTML = '';
+      const frag = document.createDocumentFragment();
+      filtered.forEach(e => frag.appendChild(createRelatedCard(e)));
+      relatedGrid.appendChild(frag);
+    }
+
+    (function init() {
+      const q = new URLSearchParams(window.location.search);
+      const bid = q.get('bid');
+      const pid = q.get('pid');
+      if (bid && pid) {
+        const url = `https://www.blogger.com/feeds/${encodeURIComponent(bid)}/posts/default/${encodeURIComponent(pid)}?alt=json-in-script`;
+        // cache key per artikel
+        const cacheKey = `post:${bid}:${pid}`;
+
+        // try cache
+        try {
+          const cached = sessionStorage.getItem(cacheKey);
+          if (cached) {
+            const entry = JSON.parse(cached);
+            currentBid = bid; currentPid = pid;
+            renderEntry(entry);
+            // SWR revalidate
+            fetchPostAndCache(url, cacheKey);
+            return;
+          }
+        } catch {}
+
+        // no cache: fetch jsonp
+        fetchPostAndCache(url, cacheKey, true, () => { currentBid = bid; currentPid = pid; });
+        return;
+      }
+      // Fallback: try from feed and match by "url" param (if provided)
+      const urlParam = q.get('url');
+      if (urlParam) {
+        const feedUrl = `https://wajibhimung.blogspot.com/feeds/posts/default?alt=json-in-script&max-results=50`;
+        const cacheKey = `postByUrl:${urlParam}`;
+        try {
+          const cached = sessionStorage.getItem(cacheKey);
+          if (cached) {
+            const entry = JSON.parse(cached);
+            renderEntry(entry);
+            fetchPostByUrlAndCache(feedUrl, cacheKey, urlParam);
+            return;
+          }
+        } catch {}
+        fetchPostByUrlAndCache(feedUrl, cacheKey, urlParam, true);
+        return;
+      }
+      showError('Parameter artikel tidak valid.');
+    })();
+    function fetchPostAndCache(url, cacheKey, showSkel, beforeRenderCb) {
+      if (showSkel) articleSkeleton?.classList.remove('hidden');
+      jsonp(url, (err, data) => {
+        if (err) { showError('Gagal memuat artikel.'); return; }
+        const entry = data && (data.entry || (data.feed && data.feed.entry && data.feed.entry[0]));
+        if (!entry) { showError('Artikel tidak ditemukan.'); return; }
+        try { sessionStorage.setItem(cacheKey, JSON.stringify(entry)); } catch {}
+        if (typeof beforeRenderCb === 'function') beforeRenderCb();
+        renderEntry(entry);
+      });
+    }
+
+    function fetchPostByUrlAndCache(feedUrl, cacheKey, urlParam, showSkel) {
+      if (showSkel) articleSkeleton?.classList.remove('hidden');
+      jsonp(feedUrl, (err, data) => {
+        if (err) { showError('Gagal memuat artikel.'); return; }
+        const entries = (data && data.feed && data.feed.entry) ? data.feed.entry : [];
+        const found = entries.find(e => (e.link || []).some(l => l.rel === 'alternate' && l.href === urlParam));
+        if (!found) { showError('Artikel tidak ditemukan.'); return; }
+        try { sessionStorage.setItem(cacheKey, JSON.stringify(found)); } catch {}
+        renderEntry(found);
+      });
+    }
+  </script>
+</body>
+ </html>
