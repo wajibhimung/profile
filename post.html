@@ -39,6 +39,10 @@
     .bg-grid { background-image: radial-gradient(rgba(99,102,241,0.15) 1px, transparent 1px); background-size: 18px 18px; }
     body { opacity: 0; transition: opacity .25s ease; }
     body.ready { opacity: 1; }
+  /* Reading progress bar */
+  #read-progress { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 70; pointer-events: none; }
+  #read-progress .bar { height: 100%; width: 0%; background: linear-gradient(90deg, #4f46e5, #8b5cf6); box-shadow: 0 1px 0 rgba(0,0,0,.04); transition: width .1s linear; }
+  .dark #read-progress .bar { background: linear-gradient(90deg, #6366f1, #a78bfa); }
     .content img { max-width: 100%; height: auto; border-radius: 0.5rem; }
     .content iframe { max-width: 100%; }
     .content figure { margin: 1rem 0; }
@@ -56,6 +60,10 @@
   <meta property="og:image" content="https://me.kelastkj.online/profile.png">
 </head>
 <body class="min-h-screen bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-100">
+  <!-- Thin top reading progress bar -->
+  <div id="read-progress" aria-hidden="true">
+    <div id="read-bar" class="bar"></div>
+  </div>
   <div class="absolute inset-0 bg-grid [mask-image:radial-gradient(ellipse_at_center,black,transparent_60%)] pointer-events-none"></div>
 
   <main class="relative mx-auto w-full max-w-3xl px-4 sm:px-6 py-6">
@@ -167,6 +175,46 @@
   const relatedSkeleton = document.getElementById('related-skeleton');
   document.getElementById('year').textContent = new Date().getFullYear();
 
+  // === Reading progress bar ===
+  (function setupReadingProgress(){
+    const bar = document.getElementById('read-bar');
+    if (!bar) return;
+    let ticking = false;
+    function calcProgress(){
+      const doc = document.documentElement;
+      const scrollTop = doc.scrollTop || window.pageYOffset || 0;
+      const scrollHeight = doc.scrollHeight || 0;
+      const clientH = window.innerHeight || doc.clientHeight || 0;
+      const total = Math.max(scrollHeight - clientH, 1);
+      const p = Math.min(100, Math.max(0, (scrollTop / total) * 100));
+      bar.style.width = p.toFixed(2) + '%';
+    }
+    function onScroll(){ if (!ticking) { window.requestAnimationFrame(() => { calcProgress(); ticking = false; }); ticking = true; } }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    // Initial draw
+    calcProgress();
+    // Recalculate after images load in content
+    const content = document.getElementById('content');
+    if (content) {
+      const imgs = content.querySelectorAll('img');
+      if (imgs.length) {
+        let remaining = imgs.length;
+        imgs.forEach(img => {
+          if (img.complete) { remaining--; return; }
+          img.addEventListener('load', onScroll);
+          img.addEventListener('error', onScroll);
+        });
+        if (remaining === 0) onScroll();
+      }
+      // Observe size changes (if content expands/collapses)
+      try {
+        const ro = new ResizeObserver(() => onScroll());
+        ro.observe(content);
+      } catch {}
+    }
+  })();
+
   // === Theme toggle ===
   (function setupThemeToggle(){
     const btn = document.getElementById('theme-toggle');
@@ -232,6 +280,20 @@
       return d.toLocaleDateString('id-ID', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
     }
 
+    // Inject JSON-LD <script> into <head>
+    function injectArticleJsonLd(data) {
+      try {
+        let el = document.getElementById('ld-article');
+        if (!el) {
+          el = document.createElement('script');
+          el.type = 'application/ld+json';
+          el.id = 'ld-article';
+          document.head.appendChild(el);
+        }
+        el.textContent = JSON.stringify(data);
+      } catch {}
+    }
+
   // No hero image above title per user request
 
   function hideArticleSkeleton(){ articleSkeleton?.classList.add('hidden'); }
@@ -253,7 +315,7 @@
 
       document.title = title + ' — Wibowo Laksono';
       elTitle.textContent = title;
-      // Calculate reading time
+      // Calculate reading time & description
       const plain = stripHtml(contentHtml);
       const words = plain.split(/\s+/).filter(Boolean).length;
       const readMin = Math.max(1, Math.round(words / 200));
@@ -262,6 +324,22 @@
   elContent.innerHTML = contentHtml;
   // hero removed
       if (altLink) { openOriginal.href = altLink; openOriginal.classList.remove('hidden'); }
+
+      // Build and inject JSON-LD for richer SEO
+      const description = plain.length > 160 ? (plain.slice(0, 157) + '…') : plain;
+      const ld = {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        "headline": title,
+        "datePublished": entry.published?.$t || undefined,
+        "dateModified": entry.updated?.$t || undefined,
+        "author": author ? { "@type": "Person", "name": author } : undefined,
+        "image": thumb ? [thumb] : undefined,
+        "mainEntityOfPage": { "@type": "WebPage", "@id": currentAltUrl || window.location.href },
+        "url": currentAltUrl || window.location.href,
+        "description": description
+      };
+      injectArticleJsonLd(ld);
 
   // Labels
       const labels = Array.isArray(entry.category) ? entry.category.map(c => c.term).filter(Boolean) : [];
@@ -279,6 +357,8 @@
   // share buttons removed as requested
 
   hideArticleSkeleton();
+  // Update progress after content injected
+      try { window.dispatchEvent(new Event('resize')); } catch {}
   // Load related posts
       loadRelated();
     }
