@@ -126,8 +126,17 @@
   @media (prefers-reduced-motion: reduce) { #swipe-hint, #swipe-hint .chev { animation: none !important; transition: none !important; }
   }
   </style>
+  <link rel="manifest" href="manifest.json">
 </head>
 <body class="min-h-screen bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-100">
+  <!-- Offline banner -->
+  <div id="offline-banner" class="fixed top-0 inset-x-0 z-50 hidden">
+    <div class="mx-auto max-w-xl sm:max-w-2xl md:max-w-3xl lg:max-w-4xl">
+      <div class="m-2 rounded-full bg-amber-50 text-amber-900 border border-amber-200 px-4 py-2 text-xs shadow dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-800">
+        Anda sedang offline. Beberapa data mungkin tidak terbaru.
+      </div>
+    </div>
+  </div>
   <div class="absolute inset-0 bg-grid [mask-image:radial-gradient(ellipse_at_center,black,transparent_60%)] pointer-events-none"></div>
 
   <main class="relative mx-auto w-full px-0 sm:px-0 py-4 sm:py-6">
@@ -385,6 +394,30 @@
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
   <script>
+    // PWA: register service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(()=>{});
+      });
+    }
+
+    // Offline banner toggle
+    (function setupOfflineBanner(){
+      const banner = document.getElementById('offline-banner');
+      if (!banner) return;
+      function update(){
+        try {
+          const online = (typeof navigator !== 'undefined' && 'onLine' in navigator) ? navigator.onLine : true;
+          if (online) { banner.classList.add('hidden'); }
+          else { banner.classList.remove('hidden'); }
+        } catch {}
+      }
+      window.addEventListener('online', update);
+      window.addEventListener('offline', update);
+      // initial state
+      update();
+    })();
+
     // Fade-in
     document.addEventListener('DOMContentLoaded', () => {
       requestAnimationFrame(() => document.body.classList.add('ready'));
@@ -455,6 +488,8 @@
   let activeLabel = '';
   let searchTerm = '';
   let searchDebounce = null;
+  const MAX_CACHE_POSTS = 30;
+  const cachedPostUrls = new Set();
 
     function extractThumb(html) {
       try {
@@ -580,7 +615,32 @@
         renderFiltered();
         if (wasEmpty) skeletonEl?.classList.add('hidden');
         startIndex += entries.length;
-        const nextLink = (data.feed.link || []).find(l => l.rel === 'next');
+        // Build per-entry JSONP URLs and ask SW to cache latest N posts
+        try {
+          const urls = [];
+          for (const e of entries) {
+            const idText = e.id?.$t || '';
+            const m = idText.match(/blog-(\d+)\.post-(\d+)/);
+            if (m) {
+              const u = `https://www.blogger.com/feeds/${encodeURIComponent(m[1])}/posts/default/${encodeURIComponent(m[2])}?alt=json-in-script`;
+              if (!cachedPostUrls.has(u)) { urls.push(u); cachedPostUrls.add(u); }
+            }
+          }
+          // Enforce max size
+          if (cachedPostUrls.size > MAX_CACHE_POSTS) {
+            const arr = Array.from(cachedPostUrls).slice(-MAX_CACHE_POSTS);
+            cachedPostUrls.clear();
+            arr.forEach(u => cachedPostUrls.add(u));
+          }
+          if (urls.length && navigator.serviceWorker) {
+            if (navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({ type: 'CACHE_POSTS', urls: Array.from(cachedPostUrls) });
+            } else {
+              navigator.serviceWorker.ready.then(reg => reg.active && reg.active.postMessage({ type: 'CACHE_POSTS', urls: Array.from(cachedPostUrls) })).catch(()=>{});
+            }
+          }
+        } catch {}
+  const nextLink = (data.feed.link || []).find(l => l.rel === 'next');
         if (!nextLink || entries.length < pageSize) {
           hasMore = false;
           endEl.classList.remove('hidden');
