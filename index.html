@@ -58,7 +58,30 @@
   </script>
   
   <!-- Assets -->
+  <script>
+    // Early theme apply to avoid flash of wrong theme
+    (function() {
+      try {
+  var t = localStorage.getItem('theme');
+    // Default to dark when no saved preference (per request)
+    if (!t) { t = 'dark'; }
+  if (t === 'dark') { document.documentElement.classList.add('dark'); if (document.body) document.body.classList.add('dark'); }
+  else { document.documentElement.classList.remove('dark'); if (document.body) document.body.classList.remove('dark'); }
+  // Sync theme-color on initial load
+  var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', t === 'dark' ? '#0f172a' : '#f8fafc');
+      } catch (e) {}
+  // Tailwind Play CDN config (define BEFORE CDN script so darkMode:'class' is honored)
+  var tailwind = window.tailwind || {};
+  tailwind.config = { darkMode: 'class' };
+  window.tailwind = tailwind;
+  })();
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Ensure Tailwind Play CDN uses class-based dark mode
+    try { tailwind.config = Object.assign({}, tailwind.config || {}, { darkMode: 'class' }); } catch(e) { window.tailwind = { config: { darkMode: 'class' } }; }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -85,6 +108,23 @@
     @media (min-width:640px){ .auto-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); } }
     @media (min-width:1024px){ .auto-grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); } }
     @media (min-width:1536px){ .auto-grid { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); } }
+
+  /* Swipe hint overlay (mobile only) */
+  #swipe-hint { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(8px); z-index: 50; opacity: 0; pointer-events: none; transition: opacity .25s ease, transform .25s ease; }
+  #swipe-hint.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+  #swipe-hint .wrap { display:flex; align-items:center; gap:.625rem; padding:.6rem .9rem; border-radius:9999px; border:1px solid rgba(255,255,255,.16); background: linear-gradient(180deg, rgba(255,255,255,.78), rgba(255,255,255,.64)); color:#0f172a; box-shadow: 0 10px 28px rgba(2, 6, 23, .22); backdrop-filter: blur(10px); }
+  .dark #swipe-hint .wrap { background: linear-gradient(180deg, rgba(2,6,23,.72), rgba(2,6,23,.62)); color:#e2e8f0; border-color: rgba(255,255,255,.08); }
+  #swipe-hint .icon { position:relative; width:32px; height:32px; border-radius:9999px; display:flex; align-items:center; justify-content:center; color:white; background: radial-gradient(120% 120% at 30% 20%, #6366f1, #a78bfa); box-shadow: inset 0 0 20px rgba(255,255,255,.18); overflow:hidden; }
+  #swipe-hint .icon::after { content:""; position:absolute; inset:-6px; border-radius:9999px; border:2px solid rgba(255,255,255,.18); opacity:.4; animation: pulseRing 1.8s ease-out infinite; }
+  #swipe-hint .chev { width:16px; height:16px; opacity:.98; filter: drop-shadow(0 1px 1px rgba(0,0,0,.28)); }
+  #swipe-hint[data-dir="right"] .chev { animation: swipeRight 1.2s ease-in-out infinite; }
+  #swipe-hint[data-dir="left"] .chev { transform: scaleX(-1); animation: swipeRight 1.2s ease-in-out infinite; }
+  #swipe-hint .text { font-size:13px; font-weight:700; letter-spacing:.2px; }
+  @keyframes swipeRight { 0% { transform: translateX(-4px) scaleX(1); } 50% { transform: translateX(4px) scaleX(1); } 100% { transform: translateX(-4px) scaleX(1); } }
+  @keyframes pulseRing { 0% { transform: scale(.7); opacity:.25; } 70% { transform: scale(1.15); opacity:0; } 100% { transform: scale(1.15); opacity:0; } }
+  @media (min-width: 769px), (pointer: fine) { #swipe-hint { display:none; } }
+  @media (prefers-reduced-motion: reduce) { #swipe-hint, #swipe-hint .chev { animation: none !important; transition: none !important; }
+  }
   </style>
 </head>
 <body class="min-h-screen bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-100">
@@ -94,9 +134,21 @@
     <!-- Top hint -->
     <div class="px-4 sm:px-6 flex items-center justify-between gap-3">
       <button id="hint" class="inline-flex items-center gap-2 rounded-full bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100 px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700 transition">➡️ Blog</button>
-      <div class="flex gap-1" aria-label="indikator slide">
-        <span class="w-2 h-2 rounded-full bg-slate-400/60" id="dot-1"></span>
-        <a id="to-blog" class="w-2 h-2 rounded-full bg-slate-300/40 block hover:bg-slate-400/60 transition" title="Buka Blog"></a>
+      <div class="flex items-center gap-2">
+        <button id="theme-toggle" aria-label="Ubah tema" title="Ubah tema" class="inline-flex items-center justify-center w-8 h-8 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 rounded-md">
+          <!-- Sun icon -->
+          <svg class="sun" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 4.5a1 1 0 0 1 1 1V7a1 1 0 1 1-2 0V5.5a1 1 0 0 1 1-1Zm0 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7.5-3.5a1 1 0 0 1-1 1H17a1 1 0 1 1 0-2h1.5a1 1 0 0 1 1 1ZM12 17a1 1 0 0 1 1 1v1.5a1 1 0 1 1-2 0V18a1 1 0 0 1 1-1Zm-6.5-5.5a1 1 0 0 1 1-1H8a1 1 0 1 1 0 2H6.5a1 1 0 0 1-1-1Zm10.61-4.61a1 1 0 0 1 1.41 0l1.06 1.06a1 1 0 0 1-1.41 1.41L15.7 8.3a1 1 0 0 1 0-1.41Zm-9.42 9.42a1 1 0 0 1 1.41 0l1.06 1.06a1 1 0 0 1-1.41 1.41L6.2 17.7a1 1 0 0 1 0-1.41Zm11.89 1.41a1 1 0 0 1-1.41-1.41l1.06-1.06a1 1 0 0 1 1.41 1.41L18.58 17.3Zm-11.16-11.16a1 1 0 0 1-1.41 1.41L4.95 6.49A1 1 0 0 1 6.36 5.08l1.06 1.06Z"/>
+          </svg>
+          <!-- Moon icon -->
+          <svg class="moon hidden" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 12.8A8.5 8.5 0 0 1 11.2 3a.75.75 0 0 0-1.02.86 7 7 0 1 0 9.96 9.96.75.75 0 0 0 .86-1.02Z"/>
+          </svg>
+        </button>
+        <div class="flex gap-1" aria-label="indikator slide">
+          <span class="w-2 h-2 rounded-full bg-slate-400/60" id="dot-1"></span>
+          <a id="to-blog" class="w-2 h-2 rounded-full bg-slate-300/40 block hover:bg-slate-400/60 transition" title="Buka Blog"></a>
+        </div>
       </div>
     </div>
     <div class="swiper mt-2">
@@ -286,6 +338,18 @@
     </div>
     <!-- Floating back-to-top (shown on Blog slide only) -->
     <button id="to-top" aria-label="Kembali ke atas" class="fixed bottom-5 right-5 z-20 rounded-full bg-indigo-600 text-white shadow-lg p-3 opacity-0 pointer-events-none transition duration-200 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-white/60 dark:focus:ring-slate-700">↑</button>
+    
+    <!-- Swipe hint overlay (injected once per page load on mobile) -->
+    <div id="swipe-hint" aria-live="polite" role="status" data-dir="right">
+      <div class="wrap">
+        <div class="icon" aria-hidden="true">
+          <svg class="chev" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8.7 5.3a1 1 0 0 0 0 1.4L13.59 12 8.7 16.3a1 1 0 1 0 1.4 1.4l5.65-5.65a1.5 1.5 0 0 0 0-2.12L10.1 5.3a1 1 0 0 0-1.4 0Z"/>
+          </svg>
+        </div>
+        <span id="swipe-hint-text" class="text">Geser ke kanan ke Blog</span>
+      </div>
+    </div>
   </main>
 
   <!-- Scripts -->
@@ -327,6 +391,9 @@
       toggleTopBtn();
       // Lazy init blog when first visiting
       ensureBlogReady();
+
+  // Show one-time swipe hint on entering Blog slide
+  maybeShowSwipeHint(swiper.activeIndex === 1 ? 'left' : 'right');
     });
     // Initial UI state
     updateDots();
@@ -494,6 +561,93 @@
   toTopBtn.addEventListener('click', ()=> window.scrollTo({ top:0, behavior:'smooth' }));
   // If landing directly on Blog slide (via ?view=blog), init now
   ensureBlogReady();
+
+  // === Theme toggle ===
+  (function setupThemeToggle(){
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+    const sun = btn.querySelector('.sun');
+    const moon = btn.querySelector('.moon');
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+
+    function getTheme(){ return document.documentElement.classList.contains('dark') ? 'dark' : 'light'; }
+    function updateIcon(theme){
+      if (!sun || !moon) return;
+      if (theme === 'dark') { sun.classList.add('hidden'); moon.classList.remove('hidden'); btn.setAttribute('aria-label','Ubah ke mode terang'); }
+      else { moon.classList.add('hidden'); sun.classList.remove('hidden'); btn.setAttribute('aria-label','Ubah ke mode gelap'); }
+    }
+    function updateThemeColor(theme){
+      if (!metaTheme) return;
+      // Match the body gradient top color roughly
+      metaTheme.setAttribute('content', theme === 'dark' ? '#0f172a' : '#f8fafc');
+    }
+    function setTheme(theme){
+      if (theme === 'dark') { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); }
+      else { document.documentElement.classList.remove('dark'); document.body.classList.remove('dark'); }
+      try { localStorage.setItem('theme', theme); } catch(e){}
+      updateIcon(theme);
+      updateThemeColor(theme);
+    }
+    btn.addEventListener('click', function(){ setTheme(getTheme() === 'dark' ? 'light' : 'dark'); });
+    // Initialize icon state on load
+    const initial = getTheme();
+    updateIcon(initial);
+    updateThemeColor(initial);
+  })();
+
+  // === Swipe hints (mobile-only, once per slide per page load) ===
+  (function setupSwipeHints(){
+    const hintEl = document.getElementById('swipe-hint');
+    const hintText = document.getElementById('swipe-hint-text');
+    let hideTimer = null;
+    let shownProfile = false;
+    let shownBlog = false;
+
+    function isMobile() {
+      return (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) && window.innerWidth <= 768;
+    }
+
+    function hideHint() {
+      if (!hintEl) return;
+      hintEl.classList.remove('show');
+      if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+    }
+
+    function showHint(direction) {
+      if (!hintEl || !isMobile()) return;
+      hintEl.setAttribute('data-dir', direction);
+      if (direction === 'right') {
+        hintText.textContent = 'Geser ke kanan ke Blog';
+      } else {
+        hintText.textContent = 'Geser ke kiri ke Profil';
+      }
+      hintEl.classList.add('show');
+      if (hideTimer) clearTimeout(hideTimer);
+      hideTimer = setTimeout(hideHint, 2600);
+    }
+
+    // Dismiss on tap
+    hintEl?.addEventListener('click', hideHint, { passive: true });
+
+    // Public gate: decide when to show and set one-time flags
+    window.maybeShowSwipeHint = function(dir){
+      if (!isMobile()) return;
+      if (dir === 'right') {
+        if (!shownProfile) {
+          shownProfile = true;
+          setTimeout(() => showHint('right'), 350);
+        }
+      } else {
+        if (!shownBlog) {
+          shownBlog = true;
+          setTimeout(() => showHint('left'), 250);
+        }
+      }
+    }
+
+    // Initial hint based on current slide
+    maybeShowSwipeHint(swiper.activeIndex === 0 ? 'right' : 'left');
+  })();
   </script>
 </body>
 </html>

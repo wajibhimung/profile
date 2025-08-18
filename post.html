@@ -6,7 +6,30 @@
   <title>Artikel — Wibowo Laksono</title>
   <meta name="description" content="Baca artikel blog di situs ini tanpa pindah ke halaman lain.">
   <meta name="theme-color" content="#0f172a">
+  <script>
+    // Early theme apply to avoid flash of wrong theme
+    (function() {
+      try {
+        var t = localStorage.getItem('theme');
+        // Default to dark when no saved preference
+        if (!t) { t = 'dark'; }
+        if (t === 'dark') { document.documentElement.classList.add('dark'); if (document.body) document.body.classList.add('dark'); }
+        else { document.documentElement.classList.remove('dark'); if (document.body) document.body.classList.remove('dark'); }
+        // Sync theme-color on initial load
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', t === 'dark' ? '#0f172a' : '#f8fafc');
+        // Tailwind Play CDN config (define BEFORE CDN script so darkMode:'class' is honored)
+        var tailwind = window.tailwind || {};
+        tailwind.config = { darkMode: 'class' };
+        window.tailwind = tailwind;
+      } catch (e) {}
+    })();
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Reinforce Tailwind to use class-based dark mode after CDN loads
+    try { tailwind.config = Object.assign({}, tailwind.config || {}, { darkMode: 'class' }); } catch(e) { window.tailwind = { config: { darkMode: 'class' } }; }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -38,7 +61,19 @@
   <main class="relative mx-auto w-full max-w-3xl px-4 sm:px-6 py-6">
     <header class="flex items-center justify-between gap-3">
       <button id="back" class="inline-flex items-center gap-2 rounded-full bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100 px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700 transition">⬅️ Kembali</button>
-      <a id="open-original" href="#" target="_blank" rel="noreferrer" class="text-sm text-indigo-600 hover:underline hidden">Buka di Blogger ↗</a>
+      <div class="flex items-center gap-2">
+        <button id="theme-toggle" aria-label="Ubah tema" title="Ubah tema" class="inline-flex items-center justify-center w-8 h-8 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 rounded-md">
+          <!-- Sun icon -->
+          <svg class="sun" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 4.5a1 1 0 0 1 1 1V7a1 1 0 1 1-2 0V5.5a1 1 0 0 1 1-1Zm0 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7.5-3.5a1 1 0 0 1-1 1H17a1 1 0 1 1 0-2h1.5a1 1 0 0 1 1 1ZM12 17a1 1 0 0 1 1 1v1.5a1 1 0 1 1-2 0V18a1 1 0 0 1 1-1Zm-6.5-5.5a1 1 0 0 1 1-1H8a1 1 0 1 1 0 2H6.5a1 1 0 0 1-1-1Zm10.61-4.61a1 1 0 0 1 1.41 0l1.06 1.06a1 1 0 0 1-1.41 1.41L15.7 8.3a1 1 0 0 1 0-1.41Zm-9.42 9.42a1 1 0 0 1 1.41 0l1.06 1.06a1 1 0 0 1-1.41 1.41L6.2 17.7a1 1 0 0 1 0-1.41Zm11.89 1.41a1 1 0 0 1-1.41-1.41l1.06-1.06a1 1 0 0 1 1.41 1.41L18.58 17.3Zm-11.16-11.16a1 1 0 0 1-1.41 1.41L4.95 6.49A1 1 0 0 1 6.36 5.08l1.06 1.06Z"/>
+          </svg>
+          <!-- Moon icon -->
+          <svg class="moon hidden" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 12.8A8.5 8.5 0 0 1 11.2 3a.75.75 0 0 0-1.02.86 7 7 0 1 0 9.96 9.96.75.75 0 0 0 .86-1.02Z"/>
+          </svg>
+        </button>
+        <a id="open-original" href="#" target="_blank" rel="noreferrer" class="text-sm text-indigo-600 hover:underline hidden">Buka di Blogger ↗</a>
+      </div>
     </header>
 
   <article class="mt-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 shadow-sm overflow-hidden">
@@ -131,6 +166,35 @@
   const articleSkeleton = document.getElementById('article-skeleton');
   const relatedSkeleton = document.getElementById('related-skeleton');
   document.getElementById('year').textContent = new Date().getFullYear();
+
+  // === Theme toggle ===
+  (function setupThemeToggle(){
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+    const sun = btn.querySelector('.sun');
+    const moon = btn.querySelector('.moon');
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+
+    function getTheme(){ return document.documentElement.classList.contains('dark') ? 'dark' : 'light'; }
+    function updateIcon(theme){
+      if (!sun || !moon) return;
+      if (theme === 'dark') { sun.classList.add('hidden'); moon.classList.remove('hidden'); btn.setAttribute('aria-label','Ubah ke mode terang'); }
+      else { moon.classList.add('hidden'); sun.classList.remove('hidden'); btn.setAttribute('aria-label','Ubah ke mode gelap'); }
+    }
+    function updateThemeColor(theme){ if (metaTheme) metaTheme.setAttribute('content', theme === 'dark' ? '#0f172a' : '#f8fafc'); }
+    function setTheme(theme){
+      if (theme === 'dark') { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); }
+      else { document.documentElement.classList.remove('dark'); document.body.classList.remove('dark'); }
+      try { localStorage.setItem('theme', theme); } catch(e){}
+      updateIcon(theme);
+      updateThemeColor(theme);
+    }
+    btn.addEventListener('click', function(){ setTheme(getTheme() === 'dark' ? 'light' : 'dark'); });
+    // Initialize icon and theme-color state
+    const initial = getTheme();
+    updateIcon(initial);
+    updateThemeColor(initial);
+  })();
 
 
   let currentBid = null;
