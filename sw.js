@@ -1,13 +1,13 @@
 /* Simple offline-first service worker */
-const CACHE_NAME = 'wl-pwa-v2';
+const CACHE_NAME = 'wl-pwa-v1.1.0';
 const OFFLINE_URLS = [
-  './',
-  './index.html',
-  './post.html',
-  './offline.html',
-  './icon.png',
-  './offline.png',
-  './hai.png'
+  '/',
+  '/index.html',
+  '/post.html',
+  '/offline.html',
+  '/icon.png',
+  '/offline.png',
+  '/hai.png'
 ];
 const CDN_ASSETS = [
   'https://cdn.tailwindcss.com',
@@ -58,7 +58,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Default: try cache, then network, then offline fallback for navigations and images
+  // Default: try cache, then network, then offline fallback for navigations
   event.respondWith((async () => {
     const cached = await caches.match(req, { ignoreSearch: true });
     if (cached) {
@@ -72,11 +72,12 @@ self.addEventListener('fetch', (event) => {
       cache.put(req, res.clone());
       return res;
     } catch (e) {
-      // Navigation fallback: prefer cached index.html; else serve dedicated offline.html
-      if (req.mode === 'navigate') {
-        const cachedIndex = await caches.match('./index.html');
+  // Navigation fallback: prefer cached index.html; else serve dedicated offline.html
+  const accept = req.headers.get('accept') || '';
+  if (req.mode === 'navigate' || req.destination === 'document' || accept.includes('text/html')) {
+  const cachedIndex = await caches.match('/index.html');
         if (cachedIndex) return cachedIndex;
-        const offlineHtml = await caches.match('./offline.html');
+  const offlineHtml = await caches.match('/offline.html');
         if (offlineHtml) return offlineHtml;
         return new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } });
       }

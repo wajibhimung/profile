@@ -61,6 +61,8 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body class="min-h-screen bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-100">
+  <!-- In-app splash overlay -->
+  <div id="splash" aria-hidden="true" style="position:fixed;inset:0;z-index:70;display:grid;place-items:center;background:#f8fafc;transition:opacity .25s ease"><img src="hai.png" alt="Hai" style="max-width:min(80vw,520px);height:auto;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.3)"></div>
   <!-- Thin top reading progress bar -->
   <div id="read-progress" aria-hidden="true">
     <div id="read-bar" class="bar"></div>
@@ -157,6 +159,12 @@
     // Fade-in
     document.addEventListener('DOMContentLoaded', () => {
       requestAnimationFrame(() => document.body.classList.add('ready'));
+      const splash = document.getElementById('splash');
+      if (splash) { splash.style.opacity = '0'; setTimeout(()=> splash.remove(), 280); }
+    });
+    window.addEventListener('load', () => {
+      const splash = document.getElementById('splash');
+      if (splash) { splash.style.opacity = '0'; setTimeout(()=> splash.remove(), 280); }
     });
 
     function navigateSmooth(url) {

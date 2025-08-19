@@ -1,10 +1,13 @@
 {
   "name": "Wibowo Laksono",
   "short_name": "Wibowo",
-  "start_url": "./index.html",
-  "id": "./",
-  "scope": "./",
+  "version": "1.1.0",
+  "start_url": "/",
+  "id": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "fullscreen"],
+  "prefer_related_applications": false,
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
   "icons": [
