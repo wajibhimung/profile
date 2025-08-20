@@ -646,10 +646,21 @@
           ${dateLabel ? `<p class="mt-1 text-[12px] text-slate-500 dark:text-slate-400">${dateLabel}</p>` : ''}
           <p class="post-excerpt text-slate-600 dark:text-slate-300 line-clamp-3">${excerpt}</p>
         </div>`;
-  // Save button
+  // Save button (bookmark icon)
   const btn = document.createElement('button');
-  btn.className = 'save-btn absolute top-2 right-2 h-8 px-3 rounded-full text-[12px] font-semibold border border-slate-200/70 dark:border-slate-700/60 backdrop-blur-md ' + (isSaved ? 'bg-emerald-600 text-white' : 'bg-white/85 dark:bg-slate-900/80 text-slate-800 dark:text-slate-200');
-  btn.textContent = isSaved ? 'Tersimpan' : 'Simpan';
+  btn.className = 'save-btn absolute top-2 right-2 h-8 w-8 p-0 inline-flex items-center justify-center rounded-full border border-slate-200/70 dark:border-slate-700/60 backdrop-blur-md ' + (isSaved ? 'bg-emerald-600 text-white' : 'bg-white/85 dark:bg-slate-900/80 text-slate-800 dark:text-slate-200');
+  btn.setAttribute('aria-label', isSaved ? 'Hapus dari tersimpan' : 'Simpan untuk offline');
+  btn.innerHTML = `
+    <span class="icon-unsaved${isSaved ? ' hidden' : ''}" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21l-5-3-5 3V5a2 2 0 012-2h6a2 2 0 012 2v16z"/>
+      </svg>
+    </span>
+    <span class="icon-saved${isSaved ? '' : ' hidden'}" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <path d="M7 3a2 2 0 00-2 2v16l7-4 7 4V5a2 2 0 00-2-2H7z"/>
+      </svg>
+    </span>`;
   btn.dataset.idKey = idKey;
   btn.dataset.bid = bid;
   btn.dataset.pid = pid;
@@ -939,7 +950,9 @@
         savedIds.delete(idKey);
         saveSavedSet(savedIds);
         removeSavedEntry(idKey);
-        btn.textContent = 'Simpan';
+        const u = btn.querySelector('.icon-unsaved'); const s = btn.querySelector('.icon-saved');
+        u && u.classList.remove('hidden'); s && s.classList.add('hidden');
+        btn.setAttribute('aria-label','Simpan untuk offline');
         btn.classList.remove('bg-emerald-600','text-white');
         btn.classList.add('bg-white/85','dark:bg-slate-900/80','text-slate-800','dark:text-slate-200');
       } else {
@@ -969,9 +982,11 @@
           } : undefined
         };
         upsertSavedEntry(savedSnapshot);
-        btn.textContent = 'Tersimpan';
-        btn.classList.remove('bg-white/85','dark:bg-slate-900/80','text-slate-800','dark:text-slate-200');
-        btn.classList.add('bg-emerald-600','text-white');
+  const u = btn.querySelector('.icon-unsaved'); const s = btn.querySelector('.icon-saved');
+  u && u.classList.add('hidden'); s && s.classList.remove('hidden');
+  btn.setAttribute('aria-label','Hapus dari tersimpan');
+  btn.classList.remove('bg-white/85','dark:bg-slate-900/80','text-slate-800','dark:text-slate-200');
+  btn.classList.add('bg-emerald-600','text-white');
         // Ask SW to cache this JSONP
         try {
           const urls = jsonp ? [jsonp] : [];
