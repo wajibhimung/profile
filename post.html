@@ -69,7 +69,13 @@
 
   <main class="relative mx-auto w-full max-w-3xl px-4 sm:px-6 py-6">
     <header class="flex items-center justify-between gap-3">
-      <button id="back" class="inline-flex items-center gap-2 rounded-full bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100 px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700 transition">⬅️ Kembali</button>
+      <div class="flex items-center gap-2">
+        <button id="back" class="inline-flex items-center gap-2 rounded-full bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100 px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700 transition">⬅️ Kembali</button>
+        <button id="save-toggle" aria-label="Simpan untuk offline" title="Simpan untuk offline" class="inline-flex items-center justify-center p-0 bg-transparent text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40 hidden">
+          <span class="icon-unsaved" aria-hidden="true">💾</span>
+          <span class="icon-saved hidden" aria-hidden="true">✔️</span>
+        </button>
+      </div>
       <div class="flex items-center gap-2">
         <button id="theme-toggle" aria-label="Ubah tema" title="Ubah tema" class="inline-flex items-center justify-center w-8 h-8 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 rounded-md">
           <!-- Sun icon -->
@@ -81,7 +87,7 @@
             <path d="M21 12.8A8.5 8.5 0 0 1 11.2 3a.75.75 0 0 0-1.02.86 7 7 0 1 0 9.96 9.96.75.75 0 0 0 .86-1.02Z"/>
           </svg>
         </button>
-        <a id="open-original" href="#" target="_blank" rel="noreferrer" class="text-sm text-indigo-600 hover:underline hidden">Buka di Blogger ↗</a>
+  <a id="open-original" href="#" target="_blank" rel="noreferrer" class="text-sm text-indigo-600 hover:underline hidden">Buka di Blogger ↗</a>
       </div>
     </header>
 
@@ -89,6 +95,7 @@
       <div class="p-5 sm:p-7">
         <h1 id="title" class="text-xl sm:text-2xl font-extrabold tracking-tight">Memuat…</h1>
         <p id="meta" class="mt-1 text-[12px] text-slate-500 dark:text-slate-400"></p>
+  <span id="saved-badge" class="mt-2 inline-flex items-center rounded-full bg-emerald-600 text-white px-2.5 py-1 text-[11px] font-semibold hidden">Tersimpan</span>
         <!-- Article skeleton -->
         <div id="article-skeleton" class="mt-3 space-y-3 animate-pulse">
           <div class="h-6 bg-slate-200 dark:bg-slate-800 rounded w-3/4"></div>
@@ -181,6 +188,32 @@
   const relatedEmpty = document.getElementById('related-empty');
   const articleSkeleton = document.getElementById('article-skeleton');
   const relatedSkeleton = document.getElementById('related-skeleton');
+  const saveToggle = document.getElementById('save-toggle');
+  const savedBadge = document.getElementById('saved-badge');
+  // Saved entries storage keys mirror index.html
+  const LS_SAVED_SET = 'savedPostIds';
+  const LS_SAVED_ENTRIES = 'savedPostEntries';
+  function loadSavedSet(){ try { return new Set(JSON.parse(localStorage.getItem(LS_SAVED_SET) || '[]')); } catch { return new Set(); } }
+  function saveSavedSet(set){ try { localStorage.setItem(LS_SAVED_SET, JSON.stringify(Array.from(set))); } catch {} }
+  function loadSavedEntries(){ try { return JSON.parse(localStorage.getItem(LS_SAVED_ENTRIES) || '[]'); } catch { return []; } }
+  function upsertSavedEntry(entryObj){ try { const list = loadSavedEntries(); const idx = list.findIndex(x => x.idKey === entryObj.idKey); if (idx >= 0) list[idx] = entryObj; else list.push(entryObj); localStorage.setItem(LS_SAVED_ENTRIES, JSON.stringify(list)); } catch {} }
+  function removeSavedEntry(idKey){ try { const list = loadSavedEntries(); const next = list.filter(x => x.idKey !== idKey); localStorage.setItem(LS_SAVED_ENTRIES, JSON.stringify(next)); } catch {} }
+  const savedIds = loadSavedSet();
+  function getSavedSnapshot(bid, pid, url){
+    try {
+      const list = loadSavedEntries();
+      if (bid && pid) {
+        const idKey = `${bid}:${pid}`;
+        const found = list.find(x => x.idKey === idKey);
+        if (found) return found;
+      }
+      if (url) {
+        const found2 = list.find(x => x.link === url);
+        if (found2) return found2;
+      }
+    } catch {}
+    return null;
+  }
   document.getElementById('year').textContent = new Date().getFullYear();
 
   // === Reading progress bar ===
@@ -349,6 +382,86 @@
       };
       injectArticleJsonLd(ld);
 
+      // Saved badge + toggle setup
+      try {
+        const bid = currentBid; const pid = currentPid;
+        const idKey = (bid && pid) ? `${bid}:${pid}` : (title + '|' + (currentAltUrl || ''));
+        const isSaved = savedIds.has(idKey);
+        if (saveToggle) {
+          saveToggle.classList.remove('hidden');
+          const unsavedIcon = saveToggle.querySelector('.icon-unsaved');
+          const savedIcon = saveToggle.querySelector('.icon-saved');
+          const setIconState = (saved) => {
+            if (saved) {
+              unsavedIcon?.classList.add('hidden');
+              savedIcon?.classList.remove('hidden');
+              saveToggle.setAttribute('aria-label','Hapus dari tersimpan');
+              saveToggle.setAttribute('title','Hapus dari tersimpan');
+            } else {
+              savedIcon?.classList.add('hidden');
+              unsavedIcon?.classList.remove('hidden');
+              saveToggle.setAttribute('aria-label','Simpan untuk offline');
+              saveToggle.setAttribute('title','Simpan untuk offline');
+            }
+          };
+          setIconState(isSaved);
+          saveToggle.onclick = () => {
+            const nowSaved = savedIds.has(idKey);
+            if (nowSaved) {
+              savedIds.delete(idKey);
+              saveSavedSet(savedIds);
+              removeSavedEntry(idKey);
+              setIconState(false);
+              savedBadge?.classList.add('hidden');
+            } else {
+              savedIds.add(idKey);
+              saveSavedSet(savedIds);
+              // Build snapshot (similar to index.html)
+              const labels = Array.isArray(entry.category) ? entry.category.map(c=>c.term).filter(Boolean) : [];
+              const excerptSrc = stripHtml(entry.content?.$t || entry.summary?.$t || '');
+              const excerpt = excerptSrc.length > 110 ? (excerptSrc.slice(0,110) + '…') : excerptSrc;
+              const snapshot = {
+                idKey,
+                bid: bid || '',
+                pid: pid || '',
+                title,
+                link: currentAltUrl || '',
+                thumb: ld.image && ld.image.length ? ld.image[0] : (extractThumb(entry.content?.$t || '') || ''),
+                date: entry.published?.$t || entry.updated?.$t || '',
+                excerpt,
+                entry: {
+                  t: title,
+                  c: entry.content?.$t || entry.summary?.$t || '',
+                  s: entry.summary?.$t || '',
+                  pub: entry.published?.$t || '',
+                  upd: entry.updated?.$t || '',
+                  a: (entry.author && entry.author[0] && entry.author[0].name?.$t) ? entry.author[0].name.$t : '',
+                  labels
+                }
+              };
+              upsertSavedEntry(snapshot);
+              setIconState(true);
+              savedBadge?.classList.remove('hidden');
+              // Ask SW to cache JSONP of this post
+              try {
+                if (bid && pid && navigator.serviceWorker) {
+                  const jsonpUrl = `https://www.blogger.com/feeds/${encodeURIComponent(bid)}/posts/default/${encodeURIComponent(pid)}?alt=json-in-script`;
+                  if (navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({ type: 'CACHE_POSTS', urls: [jsonpUrl] });
+                  } else {
+                    navigator.serviceWorker.ready.then(reg => reg.active && reg.active.postMessage({ type: 'CACHE_POSTS', urls: [jsonpUrl] })).catch(()=>{});
+                  }
+                }
+              } catch {}
+            }
+          };
+        }
+        if (savedBadge) {
+          if (isSaved) savedBadge.classList.remove('hidden');
+          else savedBadge.classList.add('hidden');
+        }
+      } catch {}
+
   // Labels
       const labels = Array.isArray(entry.category) ? entry.category.map(c => c.term).filter(Boolean) : [];
       if (labels.length) {
@@ -460,8 +573,8 @@
         const url = `https://www.blogger.com/feeds/${encodeURIComponent(bid)}/posts/default/${encodeURIComponent(pid)}?alt=json-in-script`;
         // cache key per artikel
         const cacheKey = `post:${bid}:${pid}`;
-
-        // try cache
+        const saved = getSavedSnapshot(bid, pid, null);
+        // try session cache first
         try {
           const cached = sessionStorage.getItem(cacheKey);
           if (cached) {
@@ -473,8 +586,27 @@
             return;
           }
         } catch {}
-
-        // no cache: fetch jsonp
+        // use saved snapshot if offline or as immediate fallback
+        if (saved && saved.entry) {
+          const entry = {
+            title: { $t: saved.entry.t },
+            content: { $t: saved.entry.c || saved.entry.s || '' },
+            summary: { $t: saved.entry.s || '' },
+            published: { $t: saved.entry.pub || '' },
+            updated: { $t: saved.entry.upd || '' },
+            author: saved.entry.a ? [{ name: { $t: saved.entry.a } }] : undefined,
+            category: Array.isArray(saved.entry.labels) ? saved.entry.labels.map(l => ({ term: l })) : undefined,
+            id: { $t: `tag:blogger.com,1999:blog-${bid}.post-${pid}` },
+            link: [{ rel: 'alternate', href: saved.link || '' }],
+            media$thumbnail: saved.thumb ? { url: saved.thumb } : undefined
+          };
+          currentBid = bid; currentPid = pid; currentAltUrl = saved.link || null;
+          renderEntry(entry);
+          // try to revalidate in background if online
+          if (navigator.onLine) fetchPostAndCache(url, cacheKey);
+          return;
+        }
+        // else: fetch jsonp (will show error if offline and no saved)
         fetchPostAndCache(url, cacheKey, true, () => { currentBid = bid; currentPid = pid; });
         return;
       }
@@ -483,6 +615,7 @@
       if (urlParam) {
         const feedUrl = `https://wajibhimung.blogspot.com/feeds/posts/default?alt=json-in-script&max-results=50`;
         const cacheKey = `postByUrl:${urlParam}`;
+        const saved = getSavedSnapshot(null, null, urlParam);
         try {
           const cached = sessionStorage.getItem(cacheKey);
           if (cached) {
@@ -492,6 +625,24 @@
             return;
           }
         } catch {}
+        if (saved && saved.entry) {
+          const entry = {
+            title: { $t: saved.entry.t },
+            content: { $t: saved.entry.c || saved.entry.s || '' },
+            summary: { $t: saved.entry.s || '' },
+            published: { $t: saved.entry.pub || '' },
+            updated: { $t: saved.entry.upd || '' },
+            author: saved.entry.a ? [{ name: { $t: saved.entry.a } }] : undefined,
+            category: Array.isArray(saved.entry.labels) ? saved.entry.labels.map(l => ({ term: l })) : undefined,
+            id: { $t: `tag:blogger.com,1999:by-url` },
+            link: [{ rel: 'alternate', href: saved.link || urlParam }],
+            media$thumbnail: saved.thumb ? { url: saved.thumb } : undefined
+          };
+          currentAltUrl = saved.link || urlParam;
+          renderEntry(entry);
+          if (navigator.onLine) fetchPostByUrlAndCache(feedUrl, cacheKey, urlParam);
+          return;
+        }
         fetchPostByUrlAndCache(feedUrl, cacheKey, urlParam, true);
         return;
       }

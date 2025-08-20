@@ -93,4 +93,7 @@ self.addEventListener('message', async (event) => {
     const cache = await caches.open(CACHE_NAME);
     await Promise.all(urls.map(u => fetch(u).then(r => cache.put(u, r.clone())).catch(()=>{})));
   }
+  if (type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
