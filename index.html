@@ -390,6 +390,13 @@
       </div>
     </div>
   </main>
+  <!-- SW update toast -->
+  <div id="sw-update" class="fixed left-1/2 -translate-x-1/2 bottom-20 z-50 hidden">
+    <div class="pointer-events-auto bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border border-slate-200/70 dark:border-slate-700/60 rounded-full shadow-lg px-3 py-1.5 text-[13px] text-slate-800 dark:text-slate-200 flex items-center gap-2">
+      <span>Versi baru siap.</span>
+      <button id="sw-reload" class="h-7 px-3 rounded-full font-semibold bg-indigo-600 text-white">Muat ulang</button>
+    </div>
+  </div>
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
@@ -397,7 +404,23 @@
     // PWA: register service worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(()=>{});
+        navigator.serviceWorker.register('sw.js').then((reg) => {
+          try {
+            const toast = document.getElementById('sw-update');
+            const reloadBtn = document.getElementById('sw-reload');
+            let initialized = sessionStorage.getItem('swInit') === '1';
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+              if (initialized) {
+                toast?.classList.remove('hidden');
+              } else {
+                sessionStorage.setItem('swInit','1');
+                initialized = true;
+              }
+            });
+            reloadBtn?.addEventListener('click', () => location.reload());
+          } catch {}
+          return reg;
+        }).catch(()=>{});
       });
     }
 
@@ -425,7 +448,8 @@
     document.getElementById('year').textContent = new Date().getFullYear();
 
   // Swiper (no URL changes)
-  const initialSlide = (new URLSearchParams(location.search).get('view') === 'blog') ? 1 : 0;
+  const _paramsInit = new URLSearchParams(location.search);
+  const initialSlide = (_paramsInit.get('view') === 'blog' || _paramsInit.get('saved') === '1' || _paramsInit.has('label') || _paramsInit.has('q')) ? 1 : 0;
   const swiper = new Swiper('.swiper', { spaceBetween: 8, resistanceRatio: 0.85, allowTouchMove: true, autoHeight: true, initialSlide });
     const dot1 = document.getElementById('dot-1');
     const dot2 = document.getElementById('to-blog');
@@ -446,6 +470,18 @@
       }
     }
     function ensureBlogReady() { if (swiper.activeIndex === 1 && !blogInitialized) initBlog(); }
+    function pushUrlState(){
+      try {
+        const params = new URLSearchParams(location.search);
+        if (swiper.activeIndex === 1) params.set('view','blog'); else params.delete('view');
+        if (activeLabel === '__saved__') { params.set('saved','1'); params.delete('label'); }
+        else { params.delete('saved'); if (activeLabel) params.set('label', activeLabel); else params.delete('label'); }
+        if (searchTerm) params.set('q', searchTerm); else params.delete('q');
+        const qs = params.toString();
+        const url = qs ? ('?' + qs) : location.pathname;
+        history.replaceState(null, '', url);
+      } catch {}
+    }
     swiper.on('slideChange', () => {
       updateDots();
       // Reset scroll on entering home; reveal toTop based on blog state
@@ -457,6 +493,7 @@
 
   // Show one-time swipe hint on entering Blog slide
   maybeShowSwipeHint(swiper.activeIndex === 1 ? 'left' : 'right');
+      pushUrlState();
     });
     // Initial UI state
     updateDots();
@@ -490,6 +527,15 @@
   let searchDebounce = null;
   const MAX_CACHE_POSTS = 30;
   const cachedPostUrls = new Set();
+  // Saved-for-offline state
+  const LS_SAVED_SET = 'savedPostIds';
+  const LS_SAVED_ENTRIES = 'savedPostEntries';
+  function loadSavedSet(){ try { return new Set(JSON.parse(localStorage.getItem(LS_SAVED_SET) || '[]')); } catch { return new Set(); } }
+  function saveSavedSet(set){ try { localStorage.setItem(LS_SAVED_SET, JSON.stringify(Array.from(set))); } catch {} }
+  function loadSavedEntries(){ try { return JSON.parse(localStorage.getItem(LS_SAVED_ENTRIES) || '[]'); } catch { return []; } }
+  function upsertSavedEntry(entryObj){ try { const list = loadSavedEntries(); const idx = list.findIndex(x => x.idKey === entryObj.idKey); if (idx >= 0) list[idx] = entryObj; else list.push(entryObj); localStorage.setItem(LS_SAVED_ENTRIES, JSON.stringify(list)); } catch {} }
+  function removeSavedEntry(idKey){ try { const list = loadSavedEntries(); const next = list.filter(x => x.idKey !== idKey); localStorage.setItem(LS_SAVED_ENTRIES, JSON.stringify(next)); } catch {} }
+  const savedIds = loadSavedSet();
 
     function extractThumb(html) {
       try {
@@ -545,8 +591,17 @@
         return `post.html?url=${encodeURIComponent(fallbackUrl || '')}`;
       }
 
-      const el = document.createElement('article');
-      el.className = 'post-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 overflow-hidden shadow-sm hover:shadow transition';
+  // Saved identity and JSONP url
+  const idText = e.id?.$t || '';
+  const mid = idText.match(/blog-(\d+)\.post-(\d+)/);
+  const bid = mid ? mid[1] : '';
+  const pid = mid ? mid[2] : '';
+  const idKey = bid && pid ? `${bid}:${pid}` : (title + '|' + link);
+  const postJsonpUrl = (bid && pid) ? `https://www.blogger.com/feeds/${encodeURIComponent(bid)}/posts/default/${encodeURIComponent(pid)}?alt=json-in-script` : '';
+  const isSaved = savedIds.has(idKey);
+
+  const el = document.createElement('article');
+  el.className = 'post-card relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 overflow-hidden shadow-sm hover:shadow transition';
 
       const imgHTML = thumb
         ? `<img src="${thumb}" alt="" class="post-img" loading="lazy">`
@@ -560,6 +615,20 @@
           ${dateLabel ? `<p class="mt-1 text-[12px] text-slate-500 dark:text-slate-400">${dateLabel}</p>` : ''}
           <p class="post-excerpt text-slate-600 dark:text-slate-300 line-clamp-3">${excerpt}</p>
         </div>`;
+  // Save button
+  const btn = document.createElement('button');
+  btn.className = 'save-btn absolute top-2 right-2 h-8 px-3 rounded-full text-[12px] font-semibold border border-slate-200/70 dark:border-slate-700/60 backdrop-blur-md ' + (isSaved ? 'bg-emerald-600 text-white' : 'bg-white/85 dark:bg-slate-900/80 text-slate-800 dark:text-slate-200');
+  btn.textContent = isSaved ? 'Tersimpan' : 'Simpan';
+  btn.dataset.idKey = idKey;
+  btn.dataset.bid = bid;
+  btn.dataset.pid = pid;
+  btn.dataset.jsonp = postJsonpUrl;
+  btn.dataset.title = title;
+  btn.dataset.link = link;
+  btn.dataset.thumb = thumb || '';
+  btn.dataset.date = dateStr || '';
+  btn.dataset.excerpt = excerpt;
+  el.appendChild(btn);
   // store searchable text for potential future direct DOM filtering if needed
   el.dataset.search = (title + ' ' + excerptSrc).toLowerCase();
       return el;
@@ -576,6 +645,7 @@
     }
     function loadMore() {
       if (isLoading || !hasMore || swiper.activeIndex !== 1) return;
+      if (activeLabel === '__saved__') return;
       isLoading = true;
   // show skeleton only for the very first batch
   if (startIndex === 1) skeletonEl?.classList.remove('hidden');
@@ -651,6 +721,40 @@
     function renderFiltered(){
       grid.innerHTML = '';
       const term = searchTerm.trim().toLowerCase();
+      // Saved-only view
+      if (activeLabel === '__saved__') {
+        if (chipsWrap && chipsWrap.childElementCount === 0) {
+          buildChipsFromEntries([]);
+          updateChipActive();
+        }
+        skeletonEl?.classList.add('hidden');
+        loaderEl?.classList.add('hidden');
+        endEl?.classList.add('hidden');
+        const list = loadSavedEntries();
+        const filteredSaved = list.filter(x => {
+          if (!term) return true;
+          return (x.title || '').toLowerCase().includes(term) || (x.excerpt || '').toLowerCase().includes(term);
+        });
+        if (!filteredSaved.length) {
+          grid.innerHTML = '<div class="py-6 text-center text-sm text-slate-500">Belum ada artikel tersimpan.</div>';
+          return;
+        }
+        const frag = document.createDocumentFragment();
+        filteredSaved.forEach(s => {
+          const synthetic = {
+            title: { $t: s.title },
+            link: [{ rel: 'alternate', href: s.link }],
+            content: { $t: '' },
+            summary: { $t: s.excerpt || '' },
+            published: { $t: s.date || '' },
+            id: { $t: `tag:blogger.com,1999:blog-${s.bid}.post-${s.pid}` },
+            media$thumbnail: s.thumb ? { url: s.thumb } : undefined
+          };
+          frag.appendChild(createCard(synthetic));
+        });
+        grid.appendChild(frag);
+        return;
+      }
       const filtered = allPosts.filter(e => {
         if (activeLabel) {
           const labels = Array.isArray(e.category) ? e.category.map(c=>c.term) : [];
@@ -680,6 +784,22 @@
         { root: null, rootMargin: '200px', threshold: 0 }
       );
       io.observe(sentinel);
+      // If viewing saved-only, render immediately from localStorage and stop skeleton
+      if (activeLabel === '__saved__') {
+        try {
+          if (chipsWrap && chipsWrap.childElementCount === 0) {
+            buildChipsFromEntries([]);
+            updateChipActive();
+          }
+        } catch {}
+        loaderEl?.classList.add('hidden');
+        skeletonEl?.classList.add('hidden');
+        errorEl?.classList.add('hidden');
+        endEl?.classList.add('hidden');
+        hasMore = false;
+        renderFiltered();
+        return;
+      }
       loadMore();
     }
 
@@ -708,6 +828,12 @@
       });
       const labels = Array.from(set).sort((a,b)=> a.localeCompare(b, 'id'));
       chipsWrap.innerHTML = '';
+  // Saved chip
+  const savedBtn = document.createElement('button');
+  savedBtn.className = 'chip inline-flex items-center h-8 px-3 rounded-full text-[13px] font-medium bg-white/85 dark:bg-slate-900/80 text-slate-800 dark:text-slate-200 border border-slate-200/70 dark:border-slate-700/60 hover:bg-white dark:hover:bg-slate-800';
+  savedBtn.textContent = 'Tersimpan';
+  savedBtn.dataset.value = '__saved__';
+  chipsWrap.appendChild(savedBtn);
       // All chip
       const allBtn = document.createElement('button');
       allBtn.className = 'chip inline-flex items-center h-8 px-3 rounded-full text-[13px] font-medium bg-white/85 dark:bg-slate-900/80 text-slate-800 dark:text-slate-200 border border-slate-200/70 dark:border-slate-700/60 hover:bg-white dark:hover:bg-slate-800';
@@ -755,22 +881,104 @@
       hasMore = true;
       endEl.classList.add('hidden');
       errorEl?.classList.add('hidden');
+  // Important: clear label chips so they can be rebuilt for the new scope (e.g., from a specific tag back to "Semua")
+  if (chipsWrap) { chipsWrap.innerHTML = ''; }
       skeletonEl?.classList.remove('hidden');
       loadMore();
     }
+
+    // Saved toggle via delegation
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.save-btn');
+      if (!btn) return;
+      const idKey = btn.dataset.idKey;
+      const bid = btn.dataset.bid || '';
+      const pid = btn.dataset.pid || '';
+      const jsonp = btn.dataset.jsonp || '';
+      const title = btn.dataset.title || '';
+      const link = btn.dataset.link || '';
+      const thumb = btn.dataset.thumb || '';
+      const date = btn.dataset.date || '';
+      const excerpt = btn.dataset.excerpt || '';
+      if (savedIds.has(idKey)) {
+        savedIds.delete(idKey);
+        saveSavedSet(savedIds);
+        removeSavedEntry(idKey);
+        btn.textContent = 'Simpan';
+        btn.classList.remove('bg-emerald-600','text-white');
+        btn.classList.add('bg-white/85','dark:bg-slate-900/80','text-slate-800','dark:text-slate-200');
+      } else {
+        savedIds.add(idKey);
+        saveSavedSet(savedIds);
+        // Try to locate the full entry from the already loaded posts for richer offline
+        let src = null;
+        try {
+          if (bid && pid) {
+            const pat = new RegExp(`blog-${bid}\\.post-${pid}`);
+            src = allPosts.find(e => pat.test(e.id?.$t || '')) || null;
+          }
+          if (!src && link) {
+            src = allPosts.find(e => (e.link || []).some(l => l.rel === 'alternate' && l.href === link)) || null;
+          }
+        } catch {}
+        const savedSnapshot = {
+          idKey, bid, pid, title, link, thumb, date, excerpt,
+          entry: src ? {
+            t: (src.title?.$t || title || ''),
+            c: (src.content?.$t || src.summary?.$t || ''),
+            s: (src.summary?.$t || ''),
+            pub: (src.published?.$t || ''),
+            upd: (src.updated?.$t || ''),
+            a: ((src.author && src.author[0] && src.author[0].name?.$t) ? src.author[0].name.$t : ''),
+            labels: (Array.isArray(src.category) ? src.category.map(c=>c.term).filter(Boolean) : [])
+          } : undefined
+        };
+        upsertSavedEntry(savedSnapshot);
+        btn.textContent = 'Tersimpan';
+        btn.classList.remove('bg-white/85','dark:bg-slate-900/80','text-slate-800','dark:text-slate-200');
+        btn.classList.add('bg-emerald-600','text-white');
+        // Ask SW to cache this JSONP
+        try {
+          const urls = jsonp ? [jsonp] : [];
+          if (urls.length && navigator.serviceWorker) {
+            if (navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({ type: 'CACHE_POSTS', urls });
+            } else {
+              navigator.serviceWorker.ready.then(reg => reg.active && reg.active.postMessage({ type: 'CACHE_POSTS', urls })).catch(()=>{});
+            }
+          }
+        } catch {}
+      }
+      if (activeLabel === '__saved__') renderFiltered();
+    });
 
     // Search interactions with debounce and server-side query
     function applySearchTerm(v){
       searchTerm = (v || '').trim();
       if (searchClear) searchClear.classList.toggle('hidden', !searchTerm);
+      pushUrlState();
       // Debounce server query
       if (searchDebounce) clearTimeout(searchDebounce);
       searchDebounce = setTimeout(() => {
-        resetAndFetch();
+        if (activeLabel === '__saved__') { renderFiltered(); }
+        else { resetAndFetch(); }
       }, 320);
     }
     searchInput?.addEventListener('input', (e)=> applySearchTerm(e.target.value));
     searchClear?.addEventListener('click', ()=> { searchInput.value=''; applySearchTerm(''); });
+
+    // Initialize filters from URL (q, label, saved)
+    (function syncFromUrl(){
+      try {
+        const params = new URLSearchParams(location.search);
+        const q = params.get('q') || '';
+        const saved = params.get('saved') === '1';
+        const label = params.get('label') || '';
+        if (q) { searchTerm = q; if (searchInput) searchInput.value = q; if (searchClear) searchClear.classList.toggle('hidden', !q); }
+        if (saved) { activeLabel = '__saved__'; }
+        else if (label) { activeLabel = label; }
+      } catch {}
+    })();
 
     // Chip click: toggle and, if selecting a label, optionally fetch server-side by label
     chipsWrap?.addEventListener('click', (e)=>{
@@ -783,8 +991,17 @@
         activeLabel = value;
       }
       updateChipActive();
-  // When changing label, reset grid and refetch (search term stays applied)
-  resetAndFetch();
+      // Reflect URL and branch behavior
+      pushUrlState();
+      if (activeLabel === '__saved__') {
+        skeletonEl?.classList.add('hidden');
+        errorEl?.classList.add('hidden');
+        hasMore = false;
+        renderFiltered();
+      } else {
+        hasMore = true;
+        resetAndFetch();
+      }
       // Keep search term applied; renderFiltered will apply after first batch returns
     });
 

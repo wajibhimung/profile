@@ -16,5 +16,19 @@
   ],
   "screenshots": [
     { "src": "hai.png", "sizes": "1280x720", "type": "image/png", "label": "Splash" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Profil",
+      "short_name": "Profil",
+      "url": "/",
+      "icons": [{ "src": "icon.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Blog",
+      "short_name": "Blog",
+      "url": "/?view=blog",
+      "icons": [{ "src": "icon.png", "sizes": "192x192", "type": "image/png" }]
+    }
   ]
 }
