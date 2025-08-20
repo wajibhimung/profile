@@ -141,7 +141,7 @@
 
   <main class="relative mx-auto w-full px-0 sm:px-0 py-4 sm:py-6">
     <!-- Top hint -->
-    <div class="px-4 sm:px-6 flex items-center justify-between gap-3">
+  <div class="px-4 sm:px-6 flex items-center justify-between gap-3">
       <button id="hint" class="inline-flex items-center gap-2 rounded-full bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100 px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700 transition">➡️ Blog</button>
       <div class="flex items-center gap-2">
         <button id="theme-toggle" aria-label="Ubah tema" title="Ubah tema" class="inline-flex items-center justify-center w-8 h-8 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 rounded-md">
@@ -154,7 +154,7 @@
             <path d="M21 12.8A8.5 8.5 0 0 1 11.2 3a.75.75 0 0 0-1.02.86 7 7 0 1 0 9.96 9.96.75.75 0 0 0 .86-1.02Z"/>
           </svg>
         </button>
-        <div class="flex gap-1" aria-label="indikator slide">
+  <div class="flex gap-1" aria-label="indikator slide">
           <span class="w-2 h-2 rounded-full bg-slate-400/60" id="dot-1"></span>
           <a id="to-blog" class="w-2 h-2 rounded-full bg-slate-300/40 block hover:bg-slate-400/60 transition" title="Buka Blog"></a>
         </div>
@@ -268,7 +268,12 @@
             </section>
 
             <footer class="mt-auto text-center text-xs text-slate-500 dark:text-slate-400 pt-6 pb-8">
-              © <span id="year"></span> Wibowo Laksono • Dibuat dengan Tailwind • Mode gelap otomatis 🌙
+              <div>© <span id="year"></span> Wibowo Laksono • Dibuat dengan Tailwind • Mode gelap otomatis 🌙</div>
+              <div class="mt-2">
+                <button id="install-btn" title="Tambahkan ke Layar Utama" class="hidden inline-flex items-center gap-1 rounded-full bg-white/70 dark:bg-slate-900/60 text-slate-800 dark:text-slate-200 border border-slate-200/70 dark:border-slate-700/60 px-3 py-1 text-[11px] shadow-sm hover:bg-white dark:hover:bg-slate-800">
+                  📲 <span>Tambah ke layar utama</span>
+                </button>
+              </div>
             </footer>
             </div>
           </div>
@@ -401,6 +406,32 @@
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
   <script>
+    // Subtle A2HS entry (only when beforeinstallprompt is fired)
+  (function setupA2HS(){
+      let deferredPrompt = null;
+      const btn = document.getElementById('install-btn');
+      if (!btn) return;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        btn.classList.remove('hidden');
+      });
+      window.addEventListener('appinstalled', () => {
+        deferredPrompt = null;
+        btn.classList.add('hidden');
+      });
+      btn.addEventListener('click', async () => {
+        try {
+          if (!deferredPrompt) return;
+          const p = deferredPrompt;
+          deferredPrompt = null;
+          btn.classList.add('hidden');
+          await p.prompt();
+          await p.userChoice; // ignore outcome; keep UI minimal
+        } catch {}
+      });
+    })();
+
     // PWA: register service worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
