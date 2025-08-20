@@ -669,6 +669,8 @@
               if (navigator.onLine === false) offlineHintEl?.classList.remove('hidden');
               else offlineHintEl?.classList.add('hidden');
             }
+            // Ensure minimal chips exist so user can switch to Saved while offline
+            try { if (chipsWrap && chipsWrap.childElementCount === 0) { buildChipsFromEntries([]); updateChipActive(); } } catch {}
           }
           return;
         }
@@ -784,6 +786,8 @@
         { root: null, rootMargin: '200px', threshold: 0 }
       );
       io.observe(sentinel);
+  // If chips are empty (e.g., offline first load), create minimal chips so 'Tersimpan' is available
+  try { if (chipsWrap && chipsWrap.childElementCount === 0) { buildChipsFromEntries([]); updateChipActive(); } } catch {}
       // If viewing saved-only, render immediately from localStorage and stop skeleton
       if (activeLabel === '__saved__') {
         try {
