@@ -43,6 +43,26 @@
   #read-progress { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 70; pointer-events: none; }
   #read-progress .bar { height: 100%; width: 0%; background: linear-gradient(90deg, #4f46e5, #8b5cf6); box-shadow: 0 1px 0 rgba(0,0,0,.04); transition: width .1s linear; }
   .dark #read-progress .bar { background: linear-gradient(90deg, #6366f1, #a78bfa); }
+  /* Pull to refresh (compact near-top with stroke progress ring) */
+  #pull-refresh { position: fixed; top:0; left:0; right:0; height:0; overflow:visible; z-index:90; pointer-events:none; }
+  #pull-refresh .inner { margin:0 auto; width:100%; max-width:840px; display:flex; justify-content:center; }
+  #pull-refresh .bubble { margin-top:10px; width:46px; height:46px; border-radius:9999px; background:linear-gradient(135deg,#6366f1,#8b5cf6); display:flex; align-items:center; justify-content:center; color:white; box-shadow:0 4px 16px -2px rgba(0,0,0,.35); opacity:0; transform:translateY(-18px) scale(.75); transition:opacity .25s ease, transform .28s cubic-bezier(.4,0,.2,1), background .25s ease; position:relative; will-change:transform; }
+  .dark #pull-refresh .bubble { background:linear-gradient(135deg,#4f46e5,#7c3aed); }
+  #pull-refresh.ready .bubble { background:linear-gradient(135deg,#10b981,#059669); }
+  #pull-refresh.show .bubble { opacity:1; }
+  #pull-refresh .icon { width:26px; height:26px; transition: transform .25s cubic-bezier(.4,0,.2,1); will-change:transform; }
+  #pull-refresh.loading .icon { animation: spin 1s linear infinite; }
+  #pull-refresh .progress { position:absolute; inset:0; transform:rotate(-90deg); }
+  #pull-refresh .progress circle { fill:none; stroke-width:3; }
+  #pull-refresh .progress .track { stroke:rgba(255,255,255,.25); transition:stroke .25s ease; }
+  #pull-refresh.ready .progress .track { stroke:rgba(255,255,255,.35); }
+  #pull-refresh .progress .bar { stroke:rgba(255,255,255,.85); stroke-linecap:round; stroke-dasharray:126; stroke-dashoffset:126; transition: stroke-dashoffset .12s linear; }
+  #pull-refresh.loading .progress { animation: pr-spin .9s linear infinite; }
+  #pull-refresh.loading .progress .bar { stroke-dashoffset:25 !important; transition:none; }
+  @keyframes pr-spin { to { transform: rotate(270deg); } }
+  .dark #pull-refresh .progress .track { stroke:rgba(255,255,255,.28); }
+  .dark #pull-refresh .progress .bar { stroke:rgba(255,255,255,.9); }
+  @keyframes spin { to { transform: rotate(360deg); } }
     .content img { max-width: 100%; height: auto; border-radius: 0.5rem; }
     .content iframe { max-width: 100%; }
     .content figure { margin: 1rem 0; }
@@ -82,6 +102,8 @@
   <div class="absolute inset-0 bg-grid [mask-image:radial-gradient(ellipse_at_center,black,transparent_60%)] pointer-events-none"></div>
 
   <main class="relative mx-auto w-full max-w-3xl px-4 sm:px-6 py-6">
+    <!-- Pull to refresh indicator -->
+  <div id="pull-refresh" aria-hidden="true"><div class="inner"><div class="bubble"><svg class="progress" viewBox="0 0 44 44" aria-hidden="true"><circle class="track" cx="22" cy="22" r="20"/><circle class="bar" cx="22" cy="22" r="20"/></svg><div class="icon"></div></div></div></div>
     <header class="flex items-center justify-between gap-3">
       <div class="flex items-center gap-2">
         <button id="back" class="inline-flex items-center gap-2 rounded-full bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100 px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700 transition">⬅️ Kembali</button>
@@ -239,6 +261,60 @@
   function upsertSavedEntry(entryObj){ try { const list = loadSavedEntries(); const idx = list.findIndex(x => x.idKey === entryObj.idKey); if (idx >= 0) list[idx] = entryObj; else list.push(entryObj); localStorage.setItem(LS_SAVED_ENTRIES, JSON.stringify(list)); } catch {} }
   function removeSavedEntry(idKey){ try { const list = loadSavedEntries(); const next = list.filter(x => x.idKey !== idKey); localStorage.setItem(LS_SAVED_ENTRIES, JSON.stringify(next)); } catch {} }
   const savedIds = loadSavedSet();
+  // === Pull to refresh ===
+  (function setupPullToRefresh(){
+    const el = document.getElementById('pull-refresh'); if(!el) return;
+    const bubble = el.querySelector('.bubble'); const iconBox = el.querySelector('.icon'); const bar = el.querySelector('.progress .bar');
+    function postSvg(){ return `<svg width=\"26\" height=\"26\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M7 4h7l3 3v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z\"/><path d=\"M9 12h6M9 16h6M9 8h2\"/></svg>`; }
+    if(iconBox) iconBox.innerHTML = postSvg();
+  let startY=0, startX=0, pulling=false, dist=0; const THRESH=70; let loading=false; const CIRC=126;
+    function maxTravel(){ return 90; }
+    function resetBubble(){ if(bubble){ bubble.style.transform='translateY(-18px) scale(.75)'; } if(iconBox){ iconBox.style.transform='scale(0.75)'; } if(bar){ bar.style.strokeDashoffset = CIRC; } }
+    function setState(){
+  if(loading){ el.classList.add('loading'); el.classList.remove('ready'); if(bar){ bar.style.strokeDashoffset = 25; } return; }
+      el.classList.toggle('show', pulling && dist>2);
+      const pct = Math.min(dist/THRESH,1);
+      const travel = Math.min(dist*0.55, maxTravel());
+      const eased = (pct < 1) ? (1 - Math.pow(1 - pct, 1.8)) : 1;
+      if(bubble) bubble.style.transform = `translateY(${pulling?travel:-18}px) scale(${(0.75 + eased*0.25).toFixed(3)})`;
+      if(iconBox) iconBox.style.transform = `scale(${(0.75 + eased*0.25).toFixed(3)})`;
+      if(bar){ bar.style.strokeDashoffset = ((1-eased)*CIRC).toFixed(1); }
+      if(pulling && dist>=THRESH) el.classList.add('ready'); else el.classList.remove('ready');
+      if(!pulling && !loading){ resetBubble(); }
+    }
+    function onStart(e){
+      if(loading) return;
+      if(window.scrollY>0) return; // only when at top
+      if(e.touches && e.touches.length!==1) return; // ignore multi-touch
+      const t=e.touches?e.touches[0]:null; if(!t) return;
+      startY=t.clientY; startX=t.clientX; pulling=true; dist=0; setState();
+    }
+    function onMove(e){
+      if(!pulling) return;
+      if(e.touches && e.touches.length!==1){ pulling=false; dist=0; setState(); return; }
+      const t=e.touches?e.touches[0]:null; if(!t) return;
+      dist = t.clientY - startY;
+      const dx = t.clientX - startX;
+      if(Math.abs(dx) > Math.abs(dist) && Math.abs(dx) > 10 && dist < 40){
+        pulling=false; dist=0; setState(); return;
+      }
+      if(dist>0){
+        if(dist>10 && window.scrollY===0) e.preventDefault();
+        setState();
+      } else {
+        dist=0; pulling=false; setState();
+      }
+    }
+    function doReload(){ loading=true; setState(); setTimeout(()=>location.reload(), 420); }
+    function onEnd(){
+      if(!pulling) return;
+      if(dist>=THRESH){ doReload(); }
+      else { pulling=false; dist=0; setState(); }
+    }
+    window.addEventListener('touchstart', onStart, {passive:true});
+    window.addEventListener('touchmove', onMove, {passive:false});
+    window.addEventListener('touchend', onEnd, {passive:true});
+  })();
   // Toast helper
   function showToast(message){
     try {
