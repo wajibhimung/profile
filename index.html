@@ -108,6 +108,19 @@
     @media (min-width:640px){ .auto-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); } }
     @media (min-width:1024px){ .auto-grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); } }
     @media (min-width:1536px){ .auto-grid { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); } }
+  /* Toast notification (shared with post.html) */
+  #toast-root { position: fixed; top: .75rem; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: .5rem; z-index: 100; pointer-events: none; }
+  .toast { pointer-events: auto; background: #0f172a; color: #fff; padding: .55rem .9rem; font-size: .70rem; font-weight: 600; border-radius: 9999px; box-shadow: 0 4px 12px -2px rgba(0,0,0,.25), 0 2px 4px -1px rgba(0,0,0,.15); display: inline-flex; align-items: center; gap: .5rem; letter-spacing:.3px; position: relative; overflow:hidden; }
+  .dark .toast { background: #1e293b; }
+  .toast::after { content:""; position:absolute; inset:0; background:linear-gradient(120deg,rgba(255,255,255,0.08),rgba(255,255,255,0)); opacity:0; animation: sheen 2.4s ease 0.2s forwards; }
+  @keyframes sheen { 0%{transform:translateX(-60%); opacity:0;} 30%{opacity:1;} 60%{opacity:0;} 100%{transform:translateX(120%); opacity:0;} }
+  .toast-enter { opacity:0; transform: translateY(-6px) scale(.96); animation: toast-in .35s cubic-bezier(.4,.0,.2,1) forwards; }
+  @keyframes toast-in { to { opacity:1; transform: translateY(0) scale(1); } }
+  .toast-exit { opacity:1; transform: translateY(0) scale(1); animation: toast-out .32s cubic-bezier(.4,.0,.2,1) forwards; }
+  @keyframes toast-out { to { opacity:0; transform: translateY(-4px) scale(.96); } }
+  .toast .bar { position:absolute; left:0; bottom:0; height:2px; background:linear-gradient(90deg,#6366f1,#8b5cf6); width:100%; transform-origin:left; animation: bar 3.2s linear forwards; }
+  .dark .toast .bar { background:linear-gradient(90deg,#818cf8,#a78bfa); }
+  @keyframes bar { to { transform: scaleX(0); } }
 
   /* Swipe hint overlay (mobile only) */
   #swipe-hint { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(8px); z-index: 60; opacity: 0; pointer-events: none; transition: opacity .25s ease, transform .25s ease; }
@@ -567,6 +580,28 @@
   function upsertSavedEntry(entryObj){ try { const list = loadSavedEntries(); const idx = list.findIndex(x => x.idKey === entryObj.idKey); if (idx >= 0) list[idx] = entryObj; else list.push(entryObj); localStorage.setItem(LS_SAVED_ENTRIES, JSON.stringify(list)); } catch {} }
   function removeSavedEntry(idKey){ try { const list = loadSavedEntries(); const next = list.filter(x => x.idKey !== idKey); localStorage.setItem(LS_SAVED_ENTRIES, JSON.stringify(next)); } catch {} }
   const savedIds = loadSavedSet();
+  // Toast helper (reused from post.html)
+  function showToast(message){
+    try {
+      let root = document.getElementById('toast-root');
+      if(!root){
+        root = document.createElement('div');
+        root.id = 'toast-root';
+        root.setAttribute('role','status');
+        root.setAttribute('aria-live','polite');
+        document.body.appendChild(root);
+      }
+      const el = document.createElement('div');
+      el.className = 'toast toast-enter';
+      el.innerHTML = `<span>${message}</span><span class="bar" aria-hidden="true"></span>`;
+      root.appendChild(el);
+      const ttl = 3200;
+      setTimeout(()=>{ el.classList.remove('toast-enter'); el.classList.add('toast-exit'); }, ttl-350);
+      setTimeout(()=>{ el.remove(); }, ttl);
+      const toasts = root.querySelectorAll('.toast');
+      if(toasts.length>3){ for(let i=0;i<toasts.length-3;i++){ toasts[i].remove(); } }
+    } catch {}
+  }
 
     function extractThumb(html) {
       try {
@@ -955,6 +990,7 @@
         btn.setAttribute('aria-label','Simpan untuk offline');
         btn.classList.remove('bg-emerald-600','text-white');
         btn.classList.add('bg-white/85','dark:bg-slate-900/80','text-slate-800','dark:text-slate-200');
+  showToast('Artikel dihapus dari tersimpan');
       } else {
         savedIds.add(idKey);
         saveSavedSet(savedIds);
@@ -987,6 +1023,7 @@
   btn.setAttribute('aria-label','Hapus dari tersimpan');
   btn.classList.remove('bg-white/85','dark:bg-slate-900/80','text-slate-800','dark:text-slate-200');
   btn.classList.add('bg-emerald-600','text-white');
+  showToast('Artikel disimpan untuk offline');
         // Ask SW to cache this JSONP
         try {
           const urls = jsonp ? [jsonp] : [];
