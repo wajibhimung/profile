@@ -108,6 +108,28 @@
     @media (min-width:640px){ .auto-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); } }
     @media (min-width:1024px){ .auto-grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); } }
     @media (min-width:1536px){ .auto-grid { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); } }
+  /* Pull to refresh (bubble follows drag up to 1/3 viewport, no rotation) */
+  #pull-refresh { position: fixed; top:0; left:0; right:0; height:0; overflow:visible; z-index:90; pointer-events:none; }
+  #pull-refresh .inner { margin:0 auto; width:100%; max-width:760px; display:flex; justify-content:center; }
+  #pull-refresh .bubble { margin-top:10px; width:46px; height:46px; border-radius:9999px; background:linear-gradient(135deg,#6366f1,#8b5cf6); display:flex; align-items:center; justify-content:center; color:white; box-shadow:0 4px 16px -2px rgba(0,0,0,.35); opacity:0; transform:translateY(-18px) scale(.75); transition:opacity .25s ease, transform .28s cubic-bezier(.4,0,.2,1), background .25s ease; position:relative; will-change:transform; }
+  .dark #pull-refresh .bubble { background:linear-gradient(135deg,#4f46e5,#7c3aed); }
+  #pull-refresh.ready .bubble { background:linear-gradient(135deg,#10b981,#059669); }
+  #pull-refresh.show .bubble { opacity:1; }
+  #pull-refresh .icon { width:26px; height:26px; transition: transform .25s cubic-bezier(.4,0,.2,1); will-change:transform; }
+  #pull-refresh.loading .icon { animation: spin 1s linear infinite; }
+  /* SVG progress ring */
+  #pull-refresh .progress { position:absolute; inset:0; transform:rotate(-90deg); }
+  #pull-refresh .progress circle { fill:none; stroke-width:3; }
+  #pull-refresh .progress .track { stroke:rgba(255,255,255,.25); transition:stroke .25s ease; }
+  #pull-refresh.ready .progress .track { stroke:rgba(255,255,255,.35); }
+  #pull-refresh .progress .bar { stroke:rgba(255,255,255,.85); stroke-linecap:round; stroke-dasharray:126; stroke-dashoffset:126; transition: stroke-dashoffset .12s linear; }
+  .dark #pull-refresh .progress .track { stroke:rgba(255,255,255,.28); }
+  .dark #pull-refresh .progress .bar { stroke:rgba(255,255,255,.9); }
+  /* Continuous spin while loading */
+  #pull-refresh.loading .progress { animation: pr-spin .9s linear infinite; }
+  #pull-refresh.loading .progress .bar { stroke-dashoffset:25 !important; transition:none; }
+  @keyframes pr-spin { to { transform: rotate(270deg); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
   /* Toast notification (shared with post.html) */
   #toast-root { position: fixed; top: .75rem; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: .5rem; z-index: 100; pointer-events: none; }
   .toast { pointer-events: auto; background: #ffffff; color: #0f172a; padding: .55rem .9rem; font-size: .70rem; font-weight: 600; border-radius: 9999px; box-shadow: 0 4px 12px -2px rgba(0,0,0,.15), 0 2px 4px -1px rgba(0,0,0,.08); display: inline-flex; align-items: center; gap: .5rem; letter-spacing:.3px; position: relative; overflow:hidden; border:1px solid rgba(15,23,42,.08); }
@@ -153,6 +175,8 @@
   <div class="absolute inset-0 bg-grid [mask-image:radial-gradient(ellipse_at_center,black,transparent_60%)] pointer-events-none"></div>
 
   <main class="relative mx-auto w-full px-0 sm:px-0 py-4 sm:py-6">
+  <!-- Pull to refresh indicator -->
+  <div id="pull-refresh" aria-hidden="true"><div class="inner"><div class="bubble"><svg class="progress" viewBox="0 0 44 44" aria-hidden="true"><circle class="track" cx="22" cy="22" r="20"/><circle class="bar" cx="22" cy="22" r="20"/></svg><div class="icon"></div></div></div></div>
     <!-- Top hint -->
   <div class="px-4 sm:px-6 flex items-center justify-between gap-3">
       <button id="hint" class="inline-flex items-center gap-2 rounded-full bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100 px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700 transition">➡️ Blog</button>
@@ -580,6 +604,71 @@
   function upsertSavedEntry(entryObj){ try { const list = loadSavedEntries(); const idx = list.findIndex(x => x.idKey === entryObj.idKey); if (idx >= 0) list[idx] = entryObj; else list.push(entryObj); localStorage.setItem(LS_SAVED_ENTRIES, JSON.stringify(list)); } catch {} }
   function removeSavedEntry(idKey){ try { const list = loadSavedEntries(); const next = list.filter(x => x.idKey !== idKey); localStorage.setItem(LS_SAVED_ENTRIES, JSON.stringify(next)); } catch {} }
   const savedIds = loadSavedSet();
+  // === Pull to refresh ===
+  (function setupPullToRefresh(){
+    const el = document.getElementById('pull-refresh'); if(!el) return;
+    const bubble = el.querySelector('.bubble'); const iconBox = el.querySelector('.icon'); const bar = el.querySelector('.progress .bar');
+  let startY=0, startX=0, pulling=false, dist=0; const THRESH=70; let loading=false; const CIRC=126; // circumference stroke-dasharray
+    function profileSvg(){ return `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"/></svg>`; }
+    function blogSvg(){ return `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2" ry="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>`; }
+    function currentIcon(){ try { return (typeof swiper!=='undefined' && swiper.activeIndex===0) ? profileSvg() : blogSvg(); } catch { return blogSvg(); } }
+    function setIcon(){ if(iconBox) iconBox.innerHTML = currentIcon(); }
+    setIcon();
+    function maxTravel(){ return 90; } // keep bubble near top
+    function resetBubble(){ if(bubble){ bubble.style.transform='translateY(-18px) scale(.75)'; } if(iconBox){ iconBox.style.transform='scale(0.75)'; } }
+    function setState(){
+  if(loading){ el.classList.add('loading'); el.classList.remove('ready'); if(bar){ bar.style.strokeDashoffset = 25; } return; }
+      el.classList.toggle('show', pulling && dist>2);
+      const pct = Math.min(dist/THRESH,1);
+      const travel = Math.min(dist*0.55, maxTravel()); // damp vertical movement
+      const eased = (pct < 1) ? (1 - Math.pow(1 - pct, 1.8)) : 1; // custom ease
+      if(bubble) bubble.style.transform = `translateY(${pulling?travel:-18}px) scale(${(0.75 + eased*0.25).toFixed(3)})`;
+      if(iconBox) iconBox.style.transform = `scale(${(0.75 + eased*0.25).toFixed(3)})`;
+      if(bar){ bar.style.strokeDashoffset = ((1-eased)*CIRC).toFixed(1); }
+      if(pulling && dist>=THRESH) el.classList.add('ready'); else el.classList.remove('ready');
+      if(!pulling && !loading){ resetBubble(); }
+    }
+    function onStart(e){
+      if(loading) return;
+      // Only start if at very top
+      if(window.scrollY>0) return;
+      // Ignore multi-touch
+      if(e.touches && e.touches.length!==1) return;
+      const t=e.touches?e.touches[0]:null; if(!t) return;
+      setIcon();
+      startY=t.clientY; startX=t.clientX; pulling=true; dist=0; setState();
+    }
+    function onMove(e){
+      if(!pulling) return;
+      if(e.touches && e.touches.length!==1){ // cancel on multi-touch
+        pulling=false; dist=0; setState(); return;
+      }
+      const t=e.touches?e.touches[0]:null; if(!t) return;
+      dist = t.clientY - startY;
+      const dx = t.clientX - startX;
+      // If horizontal intent dominates early, abort PTR so Swiper can handle
+      if(Math.abs(dx) > Math.abs(dist) && Math.abs(dx) > 10 && dist < 40){
+        pulling=false; dist=0; setState(); return;
+      }
+      if(dist>0){
+        // Only block native scroll while actually pulling a meaningful distance and still at top
+        if(dist>10 && window.scrollY===0) e.preventDefault();
+        setState();
+      } else {
+        // User moved finger upward: abort pull so normal scroll can continue
+        dist=0; pulling=false; setState();
+      }
+    }
+    function doReload(){ loading=true; setState(); setTimeout(()=>location.reload(), 420); }
+    function onEnd(){
+      if(!pulling) return;
+      if(dist>=THRESH){ doReload(); }
+      else { pulling=false; dist=0; setState(); }
+    }
+    window.addEventListener('touchstart', onStart, {passive:true});
+    window.addEventListener('touchmove', onMove, {passive:false});
+    window.addEventListener('touchend', onEnd, {passive:true});
+  })();
   // Toast helper (reused from post.html)
   function showToast(message){
     try {
