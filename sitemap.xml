@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Sitemap untuk https://me.kelastkj.online/ -->
+<!-- Catatan: Standar sitemap hanya boleh memuat URL di domain yang sama. Link eksternal (LinkedIn, Blogger, dsb) tidak sah dimasukkan. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <!-- Halaman utama -->
+  <url>
+    <loc>https://me.kelastkj.online/</loc>
+    <priority>1.00</priority>
+    <changefreq>daily</changefreq>
+  </url>
+  <!-- Variasi tampilan blog (opsional). Jika ingin hanya root yang diindeks, hapus blok ini. -->
+  <url>
+    <loc>https://me.kelastkj.online/?view=blog</loc>
+    <priority>0.70</priority>
+    <changefreq>daily</changefreq>
+  </url>
+  <!-- Halaman offline PWA agar tetap bisa ditemukan (opsional, boleh dihapus jika tidak ingin diindeks) -->
+  <url>
+    <loc>https://me.kelastkj.online/offline.html</loc>
+    <priority>0.10</priority>
+    <changefreq>yearly</changefreq>
+  </url>
+  <!-- Template post.html (reader) - rendah prioritas -->
+  <url>
+    <loc>https://me.kelastkj.online/post.html</loc>
+    <priority>0.20</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+</urlset>
