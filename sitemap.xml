@@ -15,12 +15,6 @@
     <priority>0.70</priority>
     <changefreq>daily</changefreq>
   </url>
-  <!-- Halaman offline PWA agar tetap bisa ditemukan (opsional, boleh dihapus jika tidak ingin diindeks) -->
-  <url>
-    <loc>https://me.kelastkj.online/offline.html</loc>
-    <priority>0.10</priority>
-    <changefreq>yearly</changefreq>
-  </url>
   <!-- Template post.html (reader) - rendah prioritas -->
   <url>
     <loc>https://me.kelastkj.online/post.html</loc>
