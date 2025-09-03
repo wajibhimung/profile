@@ -1,0 +1,14 @@
+# robots.txt for https://me.kelastkj.online/
+# Hanya URL di domain ini yang relevan. Link eksternal di hub TIDAK dimasukkan (spesifikasi sitemap hanya untuk host yang sama).
+
+User-agent: *
+Allow: /
+# (Opsional) Blok parameter pencarian/filter agar tidak jadi duplikat:
+Disallow: /*?q=
+Disallow: /*&q=
+Disallow: /*?label=
+Disallow: /*&label=
+Disallow: /*?view=
+Disallow: /*&view=
+
+Sitemap: https://me.kelastkj.online/sitemap.xml
