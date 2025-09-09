@@ -221,7 +221,7 @@
             <div class="mx-auto max-w-xl flex flex-col">
             <!-- Profile card -->
             <section class="flex flex-col items-center text-center gap-3 mt-4">
-              <img src="foto.jpeg" alt="Wibowo Laksono" class="h-24 w-24 rounded-full object-cover shadow-lg ring-2 ring-white/80 dark:ring-slate-800">
+              <img src="foto.jpeg" alt="Wibowo Laksono" id="profile-photo" class="h-24 w-24 rounded-full object-cover shadow-lg ring-2 ring-white/80 dark:ring-slate-800 select-none" draggable="false" style="-webkit-touch-callout:none; -webkit-user-drag:none; user-select:none;">
               <h1 class="text-xl font-extrabold tracking-tight">Wibowo Laksono</h1>
               <p class="text-[13px] text-slate-600 dark:text-slate-300">Guru Teknik Komputer dan Jaringan • SMKN 1 Telagasari</p>
               <p class="text-[13px] text-slate-600/90 dark:text-slate-300/90 max-w-md">Ilmu dan teknologi hanyalah alat, yang membuatnya bermanfaat adalah akhlak</p>
@@ -449,6 +449,18 @@
       </div>
     </div>
   </main>
+  <!-- Photo viewer overlay (hidden by default) -->
+  <div id="photo-viewer" class="fixed inset-0 z-[120] hidden">
+    <div id="pv-backdrop" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md opacity-0 transition-opacity duration-300"></div>
+    <div class="relative h-full flex flex-col items-center justify-center px-4">
+      <img id="pv-img" src="foto.jpeg" alt="Wibowo Laksono" class="w-48 h-48 md:w-64 md:h-64 rounded-full object-cover shadow-2xl ring-4 ring-white/80 dark:ring-slate-700 scale-75 opacity-0 transition-all duration-300 ease-out">
+      <div id="pv-actions" class="mt-5 flex flex-wrap gap-3 opacity-0 translate-y-2 transition-all duration-300">
+        <button id="pv-share" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-indigo-600 text-white text-xs font-semibold shadow hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400/50">🔗 Bagikan</button>
+        <button id="pv-copy" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100 text-xs font-semibold border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400/40">📋 Salin Link</button>
+        <button id="pv-close" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-slate-900/50 text-white text-xs font-semibold backdrop-blur focus:outline-none focus:ring-2 focus:ring-indigo-400/40 hover:bg-slate-900/60">✕</button>
+      </div>
+    </div>
+  </div>
   <!-- SW update toast -->
   <div id="sw-update" class="fixed left-1/2 -translate-x-1/2 bottom-20 z-50 hidden">
     <div class="pointer-events-auto bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border border-slate-200/70 dark:border-slate-700/60 rounded-full shadow-lg px-3 py-1.5 text-[13px] text-slate-800 dark:text-slate-200 flex items-center gap-2">
@@ -1366,6 +1378,79 @@
     // Place on load and on resize
     placeHint();
     window.addEventListener('resize', placeHint);
+  })();
+
+  // === Long-press / quick-hold profile photo viewer (optimized to avoid native context menu) ===
+  (function setupPhotoViewer(){
+    const img = document.getElementById('profile-photo');
+    if(!img) return;
+    const viewer = document.getElementById('photo-viewer');
+    const backdrop = document.getElementById('pv-backdrop');
+    const pvImg = document.getElementById('pv-img');
+    const actions = document.getElementById('pv-actions');
+    const btnShare = document.getElementById('pv-share');
+    const btnCopy = document.getElementById('pv-copy');
+    const btnClose = document.getElementById('pv-close');
+    let pressTimer=null; let moved=false; const HOLD=320; // ms (lebih cepat agar sebelum context menu muncul)
+    let holding=false; let startX=0, startY=0; const MOVE_CANCEL=18; // px
+    function openViewer(){
+      if(!viewer) return;
+      viewer.classList.remove('hidden');
+      requestAnimationFrame(()=>{
+        backdrop.classList.remove('opacity-0');
+        pvImg.classList.remove('opacity-0','scale-75');
+        actions.classList.remove('opacity-0','translate-y-2');
+      });
+      document.addEventListener('keydown', escHandler);
+    }
+    function closeViewer(){
+      if(!viewer) return;
+      backdrop.classList.add('opacity-0');
+      pvImg.classList.add('opacity-0','scale-75');
+      actions.classList.add('opacity-0','translate-y-2');
+      setTimeout(()=> viewer.classList.add('hidden'), 280);
+      document.removeEventListener('keydown', escHandler);
+    }
+    function escHandler(e){ if(e.key==='Escape') closeViewer(); }
+    function clear(){ if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; } }
+    function startPress(e){
+      moved=false; clear(); holding=true;
+      if(e.touches && e.touches.length===1){ startX=e.touches[0].clientX; startY=e.touches[0].clientY; }
+      else { startX=e.clientX||0; startY=e.clientY||0; }
+      pressTimer=setTimeout(()=>{ openViewer(); holding=false; }, HOLD);
+    }
+    function movePress(e){
+      if(!pressTimer) return;
+      const p = e.touches && e.touches.length===1 ? e.touches[0] : null;
+      if(p){
+        const dx=p.clientX-startX, dy=p.clientY-startY;
+        if(Math.sqrt(dx*dx+dy*dy) > MOVE_CANCEL){ clear(); }
+      }
+    }
+    function cancelPress(){ if(moved){ clear(); } }
+    function endPress(){ clear(); }
+    // Pada sebagian browser, perlu preventDefault setelah hold tercapai; kita cegah contextmenu terpisah.
+    img.addEventListener('touchstart', startPress, {passive:true});
+    img.addEventListener('touchmove', movePress, {passive:true});
+    img.addEventListener('touchend', endPress, {passive:true});
+    img.addEventListener('touchcancel', endPress, {passive:true});
+    img.addEventListener('mousedown', (e)=>{ if(e.button!==0) return; startPress(e); });
+    img.addEventListener('mousemove', ()=>{ /* could detect drag to cancel */ });
+    img.addEventListener('mouseleave', endPress);
+    img.addEventListener('mouseup', endPress);
+    // Cegah menu konteks default (Android long-press / iOS touch callout)
+    backdrop?.addEventListener('click', closeViewer);
+    btnClose?.addEventListener('click', closeViewer);
+    // Share
+    btnShare?.addEventListener('click', async ()=>{
+      const shareData={ title: document.title, text:'Profil Wibowo Laksono', url: location.origin + '/' };
+      if(navigator.share){ try { await navigator.share(shareData); showToast('Dibagikan'); } catch(e){ /* ignore */ } }
+      else { try { await navigator.clipboard.writeText(shareData.url); showToast('Link disalin'); } catch{} }
+    });
+    // Copy
+    btnCopy?.addEventListener('click', async ()=>{
+      try { await navigator.clipboard.writeText(location.origin + '/'); showToast('Link disalin'); } catch{ showToast('Gagal menyalin'); }
+    });
   })();
   </script>
 </body>
