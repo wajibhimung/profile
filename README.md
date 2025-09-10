@@ -1,64 +1,102 @@
 ## Wibowo Laksono — Profil & Blog (PWA)
 
-A simple, fast, and installable personal profile + blog reader built for GitHub Pages. It aggregates a profile (link hub) and a modern blog experience sourced from Blogger, complete with offline support and a clean UI.
+Profil + pembaca blog ringkas, cepat, bisa di-install (PWA). Menggabungkan hub tautan dan pengalaman membaca artikel Blogger secara modern dengan dukungan offline & fitur simpan.
 
-## What is this?
-- Name: Wibowo Laksono — Profil & Blog
-- Purpose: Central place to share profile links and read blog posts comfortably in one app.
-- Live URL: https://me.kelastkj.online/
+Live: https://me.kelastkj.online/
 
-## Highlights
-- Clean two-tab layout: Profil and Blog (swipeable on mobile).
-- Dark/Light mode toggle (default: Dark), with meta theme-color sync.
-- Blog features:
-	- Infinite scroll list from Blogger via JSONP.
-	- Label filters and search (server-side q + client filter).
-	- Saved posts for offline reading with a simple icon toggle.
-	- “Tersimpan” badge on article and a Saved-only view in the list.
-	- Reading progress bar on article page.
-	- Related posts (latest) with background refresh.
-- PWA:
-	- Installable manifest, app shortcuts, and service worker caching.
-	- Works offline with an offline page fallback.
-	- Update toast when a new version is available.
+## Fitur Utama
+Profil & Navigasi
+- Dua slide (Profil ↔ Blog) dengan Swiper (swipe mobile / klik indikator / tombol tab bawah)
+- Mode gelap/terang (default: gelap) + sinkron meta theme-color
+- Long‑press (tahan ±0.32 dtk) pada foto profil: perbesar dengan backdrop blur + tombol Bagikan & Salin Link (klik kanan tetap aktif)
 
-## Files
-- `index.html` — Profile and Blog UI (Swiper, search, labels, saved, URL sync).
-- `post.html` — Article reader (progress bar, saved badge, icon save toggle, related posts).
-- `manifest.json` — PWA manifest (name, icons, shortcuts).
-- `sw.js` — Service Worker (precaching, runtime caching, offline, messages).
-- `offline.html` — Shown when offline navigation fails.
-- `profile.png` — Social/OG image.
-- `CNAME` — Custom domain for GitHub Pages.
+Blog
+- Infinite scroll JSONP feed Blogger (tanpa backend, hindari CORS)
+- Pencarian (server-side q + filter klien) & filter label dinamis
+- Simpan artikel (offline snapshot + daftar “Tersimpan” / chip khusus)
+- Mode “Tersimpan” bekerja penuh walau offline
+- Tombol simpan di kartu & halaman artikel
+- Pembaca artikel (`post.html`) dengan progress bar & (di kode) dukungan memuat konten tersimpan
 
-## How to use
-1. Open `index.html` in a browser or deploy to GitHub Pages root.
-2. Swipe or tap to switch between Profil and Blog.
-3. Use search or label chips to filter articles.
-4. Save an article:
-	 - In list: tap “Simpan” on a card.
-	 - In article: tap the 💾 icon; it turns ✔️ when saved.
-5. Install the PWA from the browser’s menu (Add to Home Screen / Install app).
+PWA & Offline
+- Service Worker: precache aset inti + runtime caching Blogger feeds & gambar
+- Pemutakhiran SW menampilkan toast “Versi baru siap”
+- Offline fallback (`offline.html`) diberi meta `noindex` (dikeluarkan dari sitemap)
+- Saved posts dimuat dari `localStorage` + cache JS
 
-## Offline behavior
-- Saved posts store a local snapshot and are cached by the service worker.
-- `post.html` will render saved snapshots when offline.
-- `index.html` has a Saved-only view that renders instantly from local data.
+SEO & Indexing
+- Meta tags disempurnakan (title konsisten, description ringkas)
+- Structured Data: `Person` + `WebSite` (SearchAction untuk pencarian internal parameter `q`)
+- `robots.txt` mengizinkan crawl root dan memblok variasi parameter (`?q=`, `?label=`, `?view=`) agar tidak jadi duplikat indeks
+- `sitemap.xml` hanya memuat URL relevan (tidak termasuk offline.html)
+- Gambar profil kini sumber lokal: `foto.jpeg` (lebih cepat, kontrol penuh)
 
-## Development notes
-- Tailwind via CDN, darkMode='class'.
-- Blogger feeds are consumed via JSONP to avoid CORS issues.
-- State is persisted in `localStorage` (theme, saved) and `sessionStorage` (post/related cache).
-- URL parameters for state: `?view=blog`, `label=...`, `q=...`, `saved=1`.
+## Struktur Berkas
+- `index.html`  : UI profil + blog (Swiper, filter, saved, long‑press viewer, theme)
+- `post.html`   : Pembaca artikel individual & progress bar
+- `sw.js`       : Service Worker (precache, stale-while-revalidate, pesan CACHE_POSTS)
+- `manifest.json`: Manifest PWA (shortcuts Profil & Blog)
+- `offline.html`: Halaman offline (noindex)
+- `robots.txt`  : Aturan crawl + link sitemap
+- `sitemap.xml` : Peta situs sederhana
+- `foto.jpeg`   : Foto profil lokal (juga dipakai favicon & apple-touch-icon)
+- `profile.png` : Gambar OG/social (bisa diganti ke foto.jpeg jika mau konsisten)
+- `CNAME`       : Domain kustom Pages
+
+## Cara Pakai Cepat
+1. Buka `index.html` (lokal atau via Pages).  
+2. Geser / klik ke tab Blog untuk memuat feed pertama.  
+3. Simpan artikel → ikon bookmark (berubah warna hijau).  
+4. Tahan foto profil sebentar untuk viewer & tombol share.  
+5. Tambah ke layar utama (A2HS) jika prompt tersedia.  
+
+## Simpan & Offline
+- Tiap artikel disimpan menyimpan snapshot dasar (judul, ringkas, tanggal, label) di `localStorage`.
+- SW diminta meng-cache JSONP detail melalui pesan `CACHE_POSTS`.
+- Mode “Tersimpan” tidak memicu fetch baru sehingga cepat & aman offline.
+
+## Parameter URL (State)
+`?view=blog` | `q=kata` | `label=NamaLabel` | `saved=1`  
+Semua dibersihkan oleh `robots.txt` untuk menghindari indeks varian.
+
+## Konfigurasi & Kustomisasi
+Hold duration long‑press: di `index.html` (fungsi `setupPhotoViewer`) konstanta `HOLD=320` ms.  
+Threshold gerak batal: `MOVE_CANCEL=18` px.  
+Ganti OG image: edit `<meta property="og:image">` di `<head>`.  
+Tambahkan verifikasi Google Search Console: sisipkan meta `google-site-verification` sebelum script lain di `<head>`.
+
+## Google Search Console (Ringkas)
+1. Gunakan properti tipe Domain untuk `kelastkj.online` (cakup semua subdomain).  
+2. Submit `https://me.kelastkj.online/sitemap.xml`.  
+3. Inspect `https://me.kelastkj.online/` → Request Indexing.  
+4. Pantau “Page Indexing” & perbaiki jika ada soft 404 (cukup jaga deskripsi profil tetap informatif).  
+
+## Pengembangan
+- Tailwind CDN (konfigurasi `darkMode:'class'` sebelum load)
+- Tidak ada build step: semua HTML/JS statis
+- JSONP Blogger: penambahan callback dinamis → insert `<script>` kemudian cleanup
+- Penyimpanan: `localStorage` (theme, saved), `sessionStorage` (flag init SW, dsb)
+- Komunikasi SW: `postMessage({ type:'CACHE_POSTS', urls:[...] })`
 
 ## Deployment (GitHub Pages)
-1. Place these files at repository root on the `main` branch.
-2. Ensure `CNAME` (if using a custom domain) matches your DNS.
-3. Enable Pages: Settings → Pages → Build and deployment: Deploy from branch → `main` / root.
+1. Push ke branch `main` (root).  
+2. Pastikan DNS domain mengarah ke GitHub Pages & file `CNAME` sesuai.  
+3. Aktifkan Pages di Settings → Pages.  
+4. Setelah live, cek `robots.txt` & `sitemap.xml` langsung via browser.
 
-## Credits
-- Design and code: Wibowo Laksono with assistance.
-- Blog content: Blogger (wajibhimung.blogspot.com).
+## Catatan Keamanan
+- Tidak menyimpan data sensitif; hanya metadata artikel dan preferensi lokal.  
+- Pastikan gambar lokal (foto.jpeg) ukuran wajar untuk mengurangi TTFB & LCP.  
+- Jika menambah script eksternal baru, pertimbangkan `integrity` & `referrerpolicy`.
 
-## License
-This project is provided as-is for personal use. Adjust and reuse responsibly.
+## Rencana Peningkatan (Opsional)
+- Preload gambar profil (`<link rel="preload" as="image">`)
+- Ganti OG image ke `foto.jpeg` agar konsisten identitas
+- Tambah dukungan share langsung ke WhatsApp/Telegram di overlay viewer
+- Kompres service worker cache manajemen (limit size / LRU)
+
+## Lisensi
+Disediakan apa adanya untuk penggunaan pribadi/edu. Boleh modifikasi dengan atribusi.
+
+---
+Ringkas: repositori ini kini mencakup optimasi SEO (schema, robots, sitemap), viewer foto interaktif, dan penyesuaian gambar lokal tanpa mengubah struktur UI dasar.
